@@ -5,7 +5,9 @@ import { exportToPng } from "./utils/exportSvg";
 import Toolbar from "./components/Toolbar";
 import LegendPanel from "./components/LegendPanel";
 import BrushPanel from "./components/BrushPanel";
-import { LabelPopup, ResetConfirmPopup, ExportingOverlay } from "./components/Popups";
+import MapsPanel from "./components/MapsPanel";
+import { saveMap, loadMap, deleteMap, mapExists } from "./utils/mapStorage";
+import { LabelPopup, ResetConfirmPopup, ExportingOverlay, SaveMapPopup, OverwriteConfirmPopup, LoadMapPopup, DeleteMapPopup } from "./components/Popups";
 import { GRID_RANGE } from "./constants";
 
 export default function HexGrid() {
@@ -17,6 +19,14 @@ export default function HexGrid() {
   const [hovered, setHovered] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [hideUI, setHideUI] = useState(false);
+  const [mapsRefresh, setMapsRefresh] = useState(0);
+  const [showSavePopup, setShowSavePopup] = useState(false);
+  const [mapName, setMapName] = useState("");
+  const [showOverwritePopup, setShowOverwritePopup] = useState(false);
+  const [pendingMapName, setPendingMapName] = useState("");
+  const [showLoadPopup, setShowLoadPopup] = useState(false);
+  const [showDeletePopup, setShowDeletePopup] = useState(false);
+  const [selectedMap, setSelectedMap] = useState("");
   const [showReset, setShowReset] = useState(false);
 
   const lastTouchDist = useRef(null);
@@ -113,6 +123,72 @@ export default function HexGrid() {
       }
     );
   };
+  const handleSaveMap = () => {
+  setMapName("");
+  setShowSavePopup(true);
+};
+  const confirmSaveMap = () => {
+  const name = mapName.trim();
+
+  if (!name) return;
+
+  if (mapExists(name)) {
+    setPendingMapName(name);
+    setShowSavePopup(false);
+    setShowOverwritePopup(true);
+    return;
+  }
+
+  saveMap(name, colors, labels, legend);
+
+  setMapsRefresh((v) => v + 1);
+
+  setShowSavePopup(false);
+  setMapName("");
+};
+  const overwriteMap = () => {
+  saveMap(
+    pendingMapName,
+    colors,
+    labels,
+    legend
+  );
+
+  setMapsRefresh((v) => v + 1);
+
+  setShowOverwritePopup(false);
+  setPendingMapName("");
+  setMapName("");
+};
+  const handleLoadRequest = (name) => {
+  setSelectedMap(name);
+  setShowLoadPopup(true);
+};
+
+const handleDeleteRequest = (name) => {
+  setSelectedMap(name);
+  setShowDeletePopup(true);
+};
+  const confirmLoadMap = () => {
+  const map = loadMap(selectedMap);
+
+  if (!map) return;
+
+  setColors(map.colors || {});
+  setLabels(map.labels || {});
+  setLegend(map.legend || {});
+
+  setShowLoadPopup(false);
+  setSelectedMap("");
+};
+  const confirmDeleteMap = () => {
+  deleteMap(selectedMap);
+
+  setMapsRefresh((v) => v + 1);
+
+  setShowDeletePopup(false);
+  setSelectedMap("");
+};
 
   // --- Build hexagons ---
 
@@ -196,6 +272,12 @@ export default function HexGrid() {
             onLegendSave={handleLegendSave}
           />
           <BrushPanel brushSize={brushSize} setBrushSize={setBrushSize} />
+          <MapsPanel
+  onSave={handleSaveMap}
+  onLoad={handleLoadRequest}
+  onDelete={handleDeleteRequest}
+  refreshKey={mapsRefresh}
+/>
         </>
       )}
 
@@ -214,6 +296,47 @@ export default function HexGrid() {
           onCancel={() => setShowReset(false)}
         />
       )}
+      {showSavePopup && (
+  <SaveMapPopup
+    mapName={mapName}
+    setMapName={setMapName}
+    onSave={confirmSaveMap}
+    onCancel={() => {
+      setShowSavePopup(false);
+      setMapName("");
+    }}
+  />
+)}
+      {showOverwritePopup && (
+  <OverwriteConfirmPopup
+    mapName={pendingMapName}
+    onConfirm={overwriteMap}
+    onCancel={() => {
+      setShowOverwritePopup(false);
+      setPendingMapName("");
+    }}
+  />
+)}
+      {showLoadPopup && (
+  <LoadMapPopup
+    mapName={selectedMap}
+    onConfirm={confirmLoadMap}
+    onCancel={() => {
+      setShowLoadPopup(false);
+      setSelectedMap("");
+    }}
+  />
+)}
+      {showDeletePopup && (
+  <DeleteMapPopup
+    mapName={selectedMap}
+    onConfirm={confirmDeleteMap}
+    onCancel={() => {
+      setShowDeletePopup(false);
+      setSelectedMap("");
+    }}
+  />
+)}
       {exporting && <ExportingOverlay />}
 
       {/* SVG canvas */}
