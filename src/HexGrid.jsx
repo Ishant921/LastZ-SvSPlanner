@@ -1,109 +1,64 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { useHexState } from "./hooks/useHexState";
+import { useMapManager } from "./hooks/mapManager/useMapManager.js";
+import { useMapActions } from "./hooks/mapManager/useMapActions.js";
+import { useViewport } from "./hooks/useViewport";
+import PopupManager from "./components/PopupManager";
 import { hexPoints, axialToPixel } from "./utils/hexMath";
 import { exportToPng } from "./utils/exportSvg";
 import Toolbar from "./components/Toolbar";
 import LegendPanel from "./components/LegendPanel";
 import BrushPanel from "./components/BrushPanel";
 import MapsPanel from "./components/MapsPanel";
-import { saveMap, loadMap, deleteMap, mapExists } from "./utils/mapStorage";
-import { LabelPopup, ResetConfirmPopup, ExportingOverlay, SaveMapPopup, OverwriteConfirmPopup, LoadMapPopup, DeleteMapPopup } from "./components/Popups";
 import { GRID_RANGE } from "./constants";
 
 export default function HexGrid() {
   const baseSize = 20;
-  const [zoom, setZoom] = useState(1);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
-  const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
+  const viewport = useViewport();
   const [hovered, setHovered] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [hideUI, setHideUI] = useState(false);
-  const [mapsRefresh, setMapsRefresh] = useState(0);
-  const [showSavePopup, setShowSavePopup] = useState(false);
-  const [mapName, setMapName] = useState("");
-  const [showOverwritePopup, setShowOverwritePopup] = useState(false);
-  const [pendingMapName, setPendingMapName] = useState("");
-  const [showLoadPopup, setShowLoadPopup] = useState(false);
-  const [showDeletePopup, setShowDeletePopup] = useState(false);
-  const [selectedMap, setSelectedMap] = useState("");
-  const [showReset, setShowReset] = useState(false);
+  const hex = useHexState();
 
-  const lastTouchDist = useRef(null);
-  const size = baseSize * zoom;
+const {
+  colors,
+  labels,
+  legend,
+  history,
 
+  selectedTool,
+  brushSize,
+
+  editingLegend,
+  editingLegendText,
+  counts,
+
+  setSelectedTool,
+  setBrushSize,
+
+  setEditingLegend,
+  setEditingLegendText,
+
+  applyTool,
+  handleUndo,
+  handleLegendSave,
+} = hex;
+  const maps = useMapManager();
   const {
-    colors, labels, legend, history,
-    selectedTool, brushSize, labelInput, labelText,
-    editingLegend, editingLegendText, counts,
-    setSelectedTool, setBrushSize, setLabelInput, setLabelText,
-    setEditingLegend, setEditingLegendText, setColors, setLabels, setLegend, applyTool, handleLabelSubmit, handleUndo, handleReset, handleLegendSave,
-  } = useHexState();
+  mapsRefresh,
+} = maps;
+  const mapActions = useMapActions({
+  hex,
+  maps,
+});
+  const [showReset, setShowReset] = useState(false);
+  const size = baseSize * viewport.zoom;
 
   // --- Interaction handlers ---
 
   const handleClick = (key) => {
     const [q, r] = key.split(",").map(Number);
     applyTool(q, r);
-  };
-
-  const handleWheel = (e) => {
-    e.preventDefault();
-    const delta = -e.deltaY * 0.001;
-    setZoom((z) => Math.max(0.3, Math.min(3, z + delta)));
-  };
-
-  const handleMouseDown = (e) => {
-    setDragging(true);
-    setLastPos({ x: e.clientX, y: e.clientY });
-  };
-
-  const handleMouseMove = (e) => {
-    if (!dragging) return;
-    const dx = e.clientX - lastPos.x;
-    const dy = e.clientY - lastPos.y;
-    setOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
-    setLastPos({ x: e.clientX, y: e.clientY });
-  };
-
-  const handleMouseUp = () => setDragging(false);
-
-  const getTouchDistance = (touches) => {
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
-
-  const handleTouchStart = (e) => {
-    if (e.touches.length === 1) {
-      setDragging(true);
-      setLastPos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
-    }
-    if (e.touches.length === 2) {
-      lastTouchDist.current = getTouchDistance(e.touches);
-    }
-  };
-
-  const handleTouchMove = (e) => {
-    if (e.touches.length === 1 && dragging) {
-      const dx = e.touches[0].clientX - lastPos.x;
-      const dy = e.touches[0].clientY - lastPos.y;
-      setOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
-      setLastPos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
-    }
-    if (e.touches.length === 2) {
-      const newDist = getTouchDistance(e.touches);
-      if (lastTouchDist.current) {
-        const delta = (newDist - lastTouchDist.current) * 0.005;
-        setZoom((z) => Math.max(0.3, Math.min(3, z + delta)));
-      }
-      lastTouchDist.current = newDist;
-    }
-  };
-
-  const handleTouchEnd = () => {
-    setDragging(false);
-    lastTouchDist.current = null;
   };
 
   const handleHideUI = () => {
@@ -123,73 +78,7 @@ export default function HexGrid() {
       }
     );
   };
-  const handleSaveMap = () => {
-  setMapName("");
-  setShowSavePopup(true);
-};
-  const confirmSaveMap = () => {
-  const name = mapName.trim();
-
-  if (!name) return;
-
-  if (mapExists(name)) {
-    setPendingMapName(name);
-    setShowSavePopup(false);
-    setShowOverwritePopup(true);
-    return;
-  }
-
-  saveMap(name, colors, labels, legend);
-
-  setMapsRefresh((v) => v + 1);
-
-  setShowSavePopup(false);
-  setMapName("");
-};
-  const overwriteMap = () => {
-  saveMap(
-    pendingMapName,
-    colors,
-    labels,
-    legend
-  );
-
-  setMapsRefresh((v) => v + 1);
-
-  setShowOverwritePopup(false);
-  setPendingMapName("");
-  setMapName("");
-};
-  const handleLoadRequest = (name) => {
-  setSelectedMap(name);
-  setShowLoadPopup(true);
-};
-
-const handleDeleteRequest = (name) => {
-  setSelectedMap(name);
-  setShowDeletePopup(true);
-};
-  const confirmLoadMap = () => {
-  const map = loadMap(selectedMap);
-
-  if (!map) return;
-
-  setColors(map.colors || {});
-  setLabels(map.labels || {});
-  setLegend(map.legend || {});
-
-  setShowLoadPopup(false);
-  setSelectedMap("");
-};
-  const confirmDeleteMap = () => {
-  deleteMap(selectedMap);
-
-  setMapsRefresh((v) => v + 1);
-
-  setShowDeletePopup(false);
-  setSelectedMap("");
-};
-
+  
   // --- Build hexagons ---
 
   const hexagons = [];
@@ -236,17 +125,17 @@ const handleDeleteRequest = (name) => {
   return (
     <div
       className="w-full h-screen bg-gray-100 relative touch-none overflow-hidden"
-      onWheel={handleWheel}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      onWheel={viewport.handleWheel}
+      onMouseMove={viewport.handleMouseMove}
+      onMouseUp={viewport.handleMouseUp}
+      onMouseLeave={viewport.handleMouseUp}
+      onTouchMove={viewport.handleTouchMove}
+      onTouchEnd={viewport.handleTouchEnd}
     >
       {/* Hover coords */}
       {!hideUI && (
         <div className="absolute top-4 left-4 bg-white/80 backdrop-blur px-3 py-2 rounded-xl shadow text-sm z-10">
-          {hovered ? `q: ${hovered.q}, r: ${hovered.r}` : "Hover a hex"}
+          {hovered ? `x: ${hovered.q}, y: ${hovered.r}` : "Hover a hex"}
         </div>
       )}
 
@@ -273,81 +162,33 @@ const handleDeleteRequest = (name) => {
           />
           <BrushPanel brushSize={brushSize} setBrushSize={setBrushSize} />
           <MapsPanel
-  onSave={handleSaveMap}
-  onLoad={handleLoadRequest}
-  onDelete={handleDeleteRequest}
+  onSave={maps.handleSaveMap}
+  onLoad={maps.handleLoadRequest}
+  onDelete={maps.handleDeleteRequest}
   refreshKey={mapsRefresh}
 />
         </>
       )}
 
       {/* Popups */}
-      {labelInput && (
-        <LabelPopup
-          labelText={labelText}
-          setLabelText={setLabelText}
-          onSubmit={handleLabelSubmit}
-          onCancel={() => { setLabelInput(null); setLabelText(""); }}
-        />
-      )}
-      {showReset && (
-        <ResetConfirmPopup
-          onConfirm={() => { handleReset(); setShowReset(false); }}
-          onCancel={() => setShowReset(false)}
-        />
-      )}
-      {showSavePopup && (
-  <SaveMapPopup
-    mapName={mapName}
-    setMapName={setMapName}
-    onSave={confirmSaveMap}
-    onCancel={() => {
-      setShowSavePopup(false);
-      setMapName("");
-    }}
-  />
-)}
-      {showOverwritePopup && (
-  <OverwriteConfirmPopup
-    mapName={pendingMapName}
-    onConfirm={overwriteMap}
-    onCancel={() => {
-      setShowOverwritePopup(false);
-      setPendingMapName("");
-    }}
-  />
-)}
-      {showLoadPopup && (
-  <LoadMapPopup
-    mapName={selectedMap}
-    onConfirm={confirmLoadMap}
-    onCancel={() => {
-      setShowLoadPopup(false);
-      setSelectedMap("");
-    }}
-  />
-)}
-      {showDeletePopup && (
-  <DeleteMapPopup
-    mapName={selectedMap}
-    onConfirm={confirmDeleteMap}
-    onCancel={() => {
-      setShowDeletePopup(false);
-      setSelectedMap("");
-    }}
-  />
-)}
-      {exporting && <ExportingOverlay />}
+      <PopupManager
+  hex={hex}
+  maps={maps}
+  mapActions={mapActions}
+  exporting={exporting}
+  showReset={showReset}
+  setShowReset={setShowReset}
+/>
 
       {/* SVG canvas */}
       <svg
         width="100%"
         height="100%"
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        style={{ cursor: dragging ? "grabbing" : "grab" }}
+        onMouseDown={viewport.handleMouseDown}
+        onTouchStart={viewport.handleTouchStart}
+        style={{ cursor: viewport.dragging ? "grabbing" : "grab" }}
       >
-        <g transform={`translate(${offset.x}, ${offset.y})`}>
+        <g transform={`translate(${viewport.offset.x}, ${viewport.offset.y})`}>
           {hexagons}
         </g>
       </svg>
