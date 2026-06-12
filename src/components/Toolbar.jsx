@@ -1,36 +1,49 @@
-import React from "react";
+import React, { useState } from "react";
 
 export default function Toolbar({ onUndo, canUndo, onExport, exporting, onHideUI, onReset }) {
+  const [open, setOpen] = useState(true);
+
   return (
-    <div className="absolute top-4 left-21 right-8 flex gap-2 flex-wrap z-10">
-      <button
-        onClick={onUndo}
-        disabled={!canUndo}
-        className="bg-white/80 backdrop-blur px-3 py-2 rounded-xl shadow text-sm disabled:opacity-40"
+    <div className="absolute top-0 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center">
+      <div
+        style={{
+          transform: open ? "translateY(0)" : "translateY(-100%)",
+          transition: "transform 0.3s ease",
+        }}
+        className="bg-white/80 backdrop-blur px-3 py-2 rounded-b-xl shadow flex gap-2"
       >
-        ↩ 
-      </button>
+        <button
+          onClick={onUndo}
+          disabled={!canUndo}
+          className="px-3 py-1 rounded-lg bg-gray-100 text-sm disabled:opacity-40"
+        >
+          ↩
+        </button>
+        <button
+          onClick={onExport}
+          disabled={exporting}
+          className="px-3 py-1 rounded-lg bg-gray-100 text-sm disabled:opacity-40"
+        >
+          {exporting ? "..." : "📷"}
+        </button>
+        <button
+          onClick={onHideUI}
+          className="px-3 py-1 rounded-lg bg-gray-100 text-sm"
+        >
+          🙈
+        </button>
+        <button
+          onClick={onReset}
+          className="px-3 py-1 rounded-lg bg-gray-100 text-sm text-red-500"
+        >
+          🗑
+        </button>
+      </div>
       <button
-        onClick={onExport}
-        disabled={exporting}
-        className="bg-white/80 backdrop-blur px-3 py-2 rounded-xl shadow text-sm disabled:opacity-40"
-        title="Export as PNG"
+        onClick={() => setOpen((v) => !v)}
+        className="w-8 h-8 bg-white/80 backdrop-blur rounded-b-xl shadow text-sm flex items-center justify-center"
       >
-        {exporting ? "..." : "📷"}
-      </button>
-      <button
-        onClick={onHideUI}
-        className="bg-white/80 backdrop-blur px-3 py-2 rounded-xl shadow text-sm"
-        title="Hide UI for 4 seconds"
-      >
-        🙈
-      </button>
-      <button
-        onClick={onReset}
-        className="bg-white/80 backdrop-blur px-3 py-2 rounded-xl shadow text-sm text-red-500"
-        title="Reset map"
-      >
-        🗑
+        ⚙️
       </button>
     </div>
   );
