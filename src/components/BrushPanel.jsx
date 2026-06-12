@@ -4,13 +4,14 @@ export default function BrushPanel({ brushSize, setBrushSize }) {
   const [open, setOpen] = useState(true);
 
   return (
-    <div className="absolute top-16 left-0 z-10 flex items-start">
+    <div
+  className="absolute top-16 left-0 z-10 flex items-start transition-transform duration-300"
+  style={{
+    transform: open ? "translateX(0)" : "translateX(-120px)",
+  }}
+>
       <div
-        style={{
-          transform: open ? "translateX(0)" : "translateX(-100%)",
-          transition: "transform 0.3s ease",
-        }}
-        className="bg-white/80 backdrop-blur px-4 py-3 rounded-r-xl shadow text-sm"
+        className="w-36 bg-white/80 backdrop-blur px-4 py-3 rounded-r-xl shadow text-sm"
       >
         <div className="mb-1 font-semibold">Brush: {brushSize}</div>
         <input
