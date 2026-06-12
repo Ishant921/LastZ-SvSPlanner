@@ -8,7 +8,7 @@ export default function Toolbar({ onUndo, canUndo, onExport, exporting, onHideUI
         disabled={!canUndo}
         className="bg-white/80 backdrop-blur px-3 py-2 rounded-xl shadow text-sm disabled:opacity-40"
       >
-        ↩ Undo
+        ↩ 
       </button>
       <button
         onClick={onExport}
