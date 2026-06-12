@@ -4,12 +4,15 @@ export default function Toolbar({ onUndo, canUndo, onExport, exporting, onHideUI
   const [open, setOpen] = useState(true);
 
   return (
-    <div className="absolute top-0 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center">
+    <div
+  className="absolute top-0 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center transition-transform duration-300"
+  style={{
+    transform: open
+      ? "translate(-50%, 0)"
+      : "translate(-50%, -44px)",
+  }}
+>
       <div
-        style={{
-          transform: open ? "translateY(0)" : "translateY(-100%)",
-          transition: "transform 0.3s ease",
-        }}
         className="bg-white/80 backdrop-blur px-3 py-2 rounded-b-xl shadow flex gap-2"
       >
         <button
