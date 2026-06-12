@@ -27,8 +27,7 @@ export default function HexGrid() {
     selectedTool, brushSize, labelInput, labelText,
     editingLegend, editingLegendText, counts,
     setSelectedTool, setBrushSize, setLabelInput, setLabelText,
-    setEditingLegend, setEditingLegendText,
-    applyTool, handleLabelSubmit, handleUndo, handleReset, handleLegendSave,
+    setEditingLegend, setEditingLegendText, setColors, setLabels, setLegend, applyTool, handleLabelSubmit, handleUndo, handleReset, handleLegendSave,
   } = useHexState();
 
   // --- Interaction handlers ---
