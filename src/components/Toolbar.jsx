@@ -2,7 +2,7 @@ import React from "react";
 
 export default function Toolbar({ onUndo, canUndo, onExport, exporting, onHideUI, onReset }) {
   return (
-    <div className="absolute top-4 left-16 right-8 flex gap-2 flex-wrap z-10">
+    <div className="absolute top-4 left-30 right-8 flex gap-2 flex-wrap z-10">
       <button
         onClick={onUndo}
         disabled={!canUndo}
