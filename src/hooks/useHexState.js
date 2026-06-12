@@ -156,6 +156,9 @@ export function useHexState() {
     setLabelText,
     setEditingLegend,
     setEditingLegendText,
+    setColors,
+    setLabels,
+    setLegend,
     // Actions
     applyTool,
     handleLabelSubmit,
