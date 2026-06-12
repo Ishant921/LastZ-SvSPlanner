@@ -15,7 +15,12 @@ export default function LegendPanel({
   const [open, setOpen] = useState(true);
 
   return (
-    <div className="absolute top-16 right-0 z-10 flex items-start">
+    <div
+  className="absolute top-16 right-0 z-10 flex items-start transition-transform duration-300"
+  style={{
+    transform: open ? "translateX(0)" : "translateX(280px)",
+  }}
+>
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-8 h-8 bg-white/80 backdrop-blur rounded-l-xl shadow text-sm flex items-center justify-center flex-shrink-0 mt-1"
@@ -23,11 +28,7 @@ export default function LegendPanel({
         🗺️
       </button>
       <div
-        style={{
-          transform: open ? "translateX(0)" : "translateX(100%)",
-          transition: "transform 0.3s ease",
-        }}
-        className="bg-white/80 backdrop-blur px-4 py-3 rounded-l-xl shadow text-sm max-h-[70vh] overflow-y-auto"
+        className="w-72 bg-white/80 backdrop-blur px-4 py-3 rounded-l-xl shadow text-sm max-h-[70vh] overflow-y-auto"
       >
         <div className="mb-2 font-semibold">Tools</div>
         <div className="flex gap-2 mb-3 flex-wrap">
