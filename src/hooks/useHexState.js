@@ -126,7 +126,7 @@ export function useHexState() {
   const handleLegendSave = (color, text) => {
     setLegend((prev) => ({ ...prev, [color]: text }));
     setEditingLegend(null);
-  };
+  }; 
 
   const counts = useMemo(() => {
     const map = {};
