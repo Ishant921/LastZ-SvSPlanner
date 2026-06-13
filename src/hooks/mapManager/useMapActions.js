@@ -6,7 +6,7 @@ import {
 } from "../../utils/mapStorage";
 
 export function useMapActions(deps) {
-  const { hex, maps } = deps;
+  const { hex, maps, toast } = deps;
 
 const {
   colors,
@@ -52,6 +52,7 @@ const {
 
     setShowSavePopup(false);
     setMapName("");
+    toast.showToast(`✓ Saved "${name}"`, "success");
   };
 
   const overwriteMap = () => {
@@ -67,6 +68,7 @@ const {
     setShowOverwritePopup(false);
     setPendingMapName("");
     setMapName("");
+    toast.showToast(`↺ Overwrote "${pendingMapName}"`, "info");
   };
 
   const confirmLoadMap = () => {
@@ -80,6 +82,7 @@ const {
 
     setShowLoadPopup(false);
     setSelectedMap("");
+    toast.showToast(`📂 Loaded "${selectedMap}"`, "default");
   };
 
   const confirmDeleteMap = () => {
@@ -89,6 +92,7 @@ const {
 
     setShowDeletePopup(false);
     setSelectedMap("");
+    toast.showToast(`🗑 Deleted "${selectedMap}"`, "danger");
   };
 
   return {
@@ -97,4 +101,4 @@ const {
     confirmLoadMap,
     confirmDeleteMap,
   };
-}
+  }

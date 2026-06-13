@@ -10,7 +10,9 @@ import Toolbar from "./components/Toolbar";
 import LegendPanel from "./components/LegendPanel";
 import BrushPanel from "./components/BrushPanel";
 import MapsPanel from "./components/MapsPanel";
-import { GRID_RANGE } from "./constants";
+import { GRID_RANGE } from "./constants"; 
+import { useToast } from "./hooks/useToast";
+import Toast from "./components/Toast";
 
 export default function HexGrid() {
   const baseSize = 20;
@@ -47,9 +49,11 @@ const {
   const {
   mapsRefresh,
 } = maps;
+  const toast = useToast();
   const mapActions = useMapActions({
   hex,
   maps,
+    toast,
 });
   const [showReset, setShowReset] = useState(false);
   const size = baseSize * viewport.zoom;
@@ -179,6 +183,7 @@ const {
   showReset={showReset}
   setShowReset={setShowReset}
 />
+      <Toast toast={toast.toast} />
 
       {/* SVG canvas */}
       <svg
