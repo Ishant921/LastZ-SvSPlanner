@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useHexState } from "./hooks/useHexState";
 import { useMapManager } from "./hooks/mapManager/useMapManager.js";
 import { useMapActions } from "./hooks/mapManager/useMapActions.js";
@@ -19,6 +19,18 @@ export default function HexGrid() {
   const viewport = useViewport();
   const [hovered, setHovered] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+  return localStorage.getItem("darkMode") === "true";
+});
+
+useEffect(() => {
+  localStorage.setItem("darkMode", darkMode);
+  if (darkMode) {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+}, [darkMode]);
   const [hideUI, setHideUI] = useState(false);
   const hex = useHexState();
 
@@ -128,7 +140,7 @@ const {
 
   return (
     <div
-      className="w-full h-screen bg-gray-100 relative touch-none overflow-hidden"
+      className="w-full h-screen bg-gray-50 dark:bg-gray-950 relative touch-none overflow-hidden"
       onWheel={viewport.handleWheel}
       onMouseMove={viewport.handleMouseMove}
       onMouseUp={viewport.handleMouseUp}
@@ -138,21 +150,23 @@ const {
     >
       {/* Hover coords */}
       {!hideUI && (
-        <div className="absolute top-4 left-4 bg-white/80 backdrop-blur px-3 py-2 rounded-xl shadow text-sm z-10">
-          {hovered ? `x: ${hovered.q}, y: ${hovered.r}` : "Hover a hex"}
-        </div>
+        <div className="absolute top-4 left-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl shadow text-sm z-10 text-gray-700 dark:text-gray-300">
+  {hovered ? `x: ${hovered.q}, y: ${hovered.r}` : "Hover a hex"}
+</div>
       )}
 
       {!hideUI && (
         <>
           <Toolbar
-            onUndo={handleUndo}
-            canUndo={history.length > 0}
-            onExport={handleExport}
-            exporting={exporting}
-            onHideUI={handleHideUI}
-            onReset={() => setShowReset(true)}
-          />
+  onUndo={handleUndo}
+  canUndo={history.length > 0}
+  onExport={handleExport}
+  exporting={exporting}
+  onHideUI={handleHideUI}
+  onReset={() => setShowReset(true)}
+  darkMode={darkMode}
+  setDarkMode={setDarkMode}
+/>
           <LegendPanel
             selectedTool={selectedTool}
             setSelectedTool={setSelectedTool}
