@@ -1,18 +1,8 @@
 import React from "react";
-import { useApp } from "../core/context/AppContext";
 import { toolRegistry } from "../tools";
+import { Link } from "react-router-dom"; // ADD THIS
 
-/**
- * Landing page - the home screen of the website.
- *
- * Full-screen experience showing:
- * - Big header with title and tagline
- * - Grid of tool cards (like e-commerce products)
- * - Each card: icon, name, description, accent color, "Open" button
- * - Footer with version info
- */
 export default function LandingPage() {
-  const { navigateToTool } = useApp();
   const tools = toolRegistry.getAll();
 
   return (
@@ -36,7 +26,6 @@ export default function LandingPage() {
               className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              {/* Icon with accent */}
               <div className="flex items-center gap-3 mb-4">
                 <span
                   className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
@@ -50,7 +39,6 @@ export default function LandingPage() {
                 />
               </div>
 
-              {/* Name & description */}
               <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 {tool.name}
               </h3>
@@ -58,13 +46,12 @@ export default function LandingPage() {
                 {tool.description}
               </p>
 
-              {/* Open button */}
-              <button
-                onClick={() => navigateToTool(tool.id)}
-                className="w-full bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-semibold transition"
-              >
-                Open Tool
-              </button>
+              {/* REPLACE THIS BUTTON */}
+              <Link to={tool.route}>
+                <button className="w-full bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-semibold transition">
+                  Open Tool
+                </button>
+              </Link>
             </div>
           ))}
         </div>

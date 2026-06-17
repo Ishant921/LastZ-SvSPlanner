@@ -1,6 +1,7 @@
 import React from "react";
 import { useApp } from "../context/AppContext";
 import { toolRegistry } from "../../tools";
+import { useLocation } from "react-router-dom";
 
 /**
  * Sidebar navigation for switching between tools.
@@ -9,9 +10,11 @@ import { toolRegistry } from "../../tools";
  * Mobile: Slide-out drawer from the left with full overlay.
  */
 export default function SideBar() {
-  const { currentTool, navigateToTool, sidebarOpen, toggleSidebar } = useApp();
+  const location = useLocation();
+  const { navigateToTool, sidebarOpen, toggleSidebar } = useApp();
 
   const tools = toolRegistry.getAll();
+  const currentRoute = location.pathname;
 
   return (
     <>
@@ -33,7 +36,7 @@ export default function SideBar() {
         {/* Tool list */}
         <nav className="flex-1 py-4 px-2 space-y-1">
           {tools.map((tool) => {
-            const isActive = currentTool === tool.id;
+            const isActive = currentRoute === tool.route;
 
             return (
               <button
@@ -71,7 +74,7 @@ export default function SideBar() {
             onClick={() => navigateToTool("home")}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-left
               ${
-                currentTool === "home"
+                currentRoute === "/"
                   ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
                   : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
               }

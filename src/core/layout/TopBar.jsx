@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { useApp } from "../context/AppContext";
+import { useLocation } from "react-router-dom";
+import { useTool } from "../context/ToolContext";
 
 /**
  * Top navigation bar.
@@ -11,6 +13,7 @@ import { useApp } from "../context/AppContext";
  * On mobile: Tool buttons collapse into overflow menu.
  */
 export default function TopBar({ toolConfig }) {
+  const location = useLocation();
   const {
     currentTool,
     goHome,
@@ -18,10 +21,32 @@ export default function TopBar({ toolConfig }) {
     toggleSidebar,
     darkMode,
     toggleDarkMode,
+    setToolbarAnchor,
   } = useApp();
 
-  const isHome = currentTool === "home";
+  const isHome = location.pathname === "/";
+  const { toolConfig: activeToolConfig, executeAction } = useTool();
   const toolName = toolConfig?.name || "LastZ Planner";
+  const toolbar = activeToolConfig?.toolbar || [];
+  const buttonRefs = useRef({});
+
+  useEffect(() => {
+    const updateAnchors = () => {
+      Object.entries(buttonRefs.current).forEach(([id, element]) => {
+        if (!element) return;
+
+        setToolbarAnchor(id, element.getBoundingClientRect());
+      });
+    };
+
+    updateAnchors();
+
+    window.addEventListener("resize", updateAnchors);
+
+    return () => {
+      window.removeEventListener("resize", updateAnchors);
+    };
+  }, [toolbar, setToolbarAnchor]);
 
   return (
     <header className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 shrink-0">
@@ -55,12 +80,15 @@ export default function TopBar({ toolConfig }) {
       </div>
 
       {/* Middle: Tool-specific buttons */}
-      {!isHome && toolConfig?.toolbar && (
+      {!isHome && toolbar.length > 0 && (
         <div className="hidden md:flex items-center gap-1">
-          {toolConfig.toolbar.map((button) => (
+          {toolbar.map((button) => (
             <button
               key={button.id}
-              onClick={() => toolConfig.onAction?.(button.id)}
+              ref={(el) => {
+                buttonRefs.current[button.id] = el;
+              }}
+              onClick={() => executeAction(button.id)}
               disabled={button.disabled}
               title={button.label}
               className={`px-3 h-9 rounded-xl transition text-sm font-medium ${

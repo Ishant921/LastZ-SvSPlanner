@@ -1,29 +1,21 @@
 import React, { useState } from "react";
 
 /**
- * Redesigned FloatingPanel — Linear/Figma-style HUD panel.
+ * Generic floating glass panel.
  *
- * Changes from original:
- * - Frosted glass surface with backdrop-blur
- * - Razor-thin border, elevated shadow
- * - Proper floating position (not edge-attached)
- * - Clean chevron toggle tab instead of emoji
+ * Positioning is handled by the parent component.
+ * This component only renders the panel UI and collapse behavior.
  */
 export default function FloatingPanel({
   children,
   label,
   width = "w-56",
-  position = "left",
   defaultOpen = true,
-  top = "top-4",
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const isLeft = position === "left";
 
   return (
-    <div
-      className={`absolute ${top} ${isLeft ? "left-3" : "right-3"} z-10 flex items-start gap-0`}
-    >
+    <div className="z-10 flex items-start gap-0">
       {/* Panel body */}
       <div
         className={`
@@ -32,9 +24,7 @@ export default function FloatingPanel({
           ${
             open
               ? "opacity-100 translate-x-0 pointer-events-auto"
-              : isLeft
-                ? "opacity-0 -translate-x-2 pointer-events-none"
-                : "opacity-0 translate-x-2 pointer-events-none"
+              : "opacity-0 -translate-x-2 pointer-events-none"
           }
         `}
         style={{
@@ -46,7 +36,6 @@ export default function FloatingPanel({
           boxShadow: "0 4px 24px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.2)",
         }}
       >
-        {/* Panel header */}
         {label && (
           <div
             className="px-3 pt-3 pb-2 flex items-center justify-between"
@@ -61,7 +50,6 @@ export default function FloatingPanel({
           </div>
         )}
 
-        {/* Content */}
         <div className="px-3 py-3">{children}</div>
       </div>
 
@@ -71,7 +59,7 @@ export default function FloatingPanel({
         className={`
           flex-shrink-0 flex items-center justify-center
           transition-all duration-200 hover:opacity-100
-          ${isLeft ? "ml-1" : "mr-1 order-first"}
+          ml-1
           ${open ? "opacity-40" : "opacity-80"}
         `}
         style={{
@@ -87,7 +75,7 @@ export default function FloatingPanel({
         }}
         title={open ? "Collapse" : "Expand"}
       >
-        {isLeft ? (open ? "‹" : "›") : open ? "›" : "‹"}
+        {open ? "‹" : "›"}
       </button>
     </div>
   );

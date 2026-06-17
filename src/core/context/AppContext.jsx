@@ -24,6 +24,9 @@ export function AppProvider({ children }) {
   // Sidebar open state (mainly for mobile drawer)
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Toolbar button positions
+  const [toolbarAnchors, setToolbarAnchors] = useState({});
+
   // Announcements
   const [announcements, setAnnouncements] = useState(() => {
     return globalStorage.load("announcements", []);
@@ -39,13 +42,18 @@ export function AppProvider({ children }) {
   });
 
   // Navigate to a tool
+  // NEW:
   const navigateToTool = useCallback((toolId) => {
-    setCurrentTool(toolId);
-    setSidebarOpen(false);
+    const tool = toolRegistry.getById(toolId);
+    if (tool) {
+      window.location.href = tool.route; // Simple navigation
+      setCurrentTool(toolId);
+      setSidebarOpen(false);
+    }
   }, []);
 
-  // Go home
   const goHome = useCallback(() => {
+    window.location.href = "/"; // Simple navigation
     setCurrentTool("home");
     setSidebarOpen(false);
   }, []);
@@ -53,6 +61,14 @@ export function AppProvider({ children }) {
   // Toggle sidebar
   const toggleSidebar = useCallback(() => {
     setSidebarOpen((prev) => !prev);
+  }, []);
+
+  // Register toolbar button position
+  const setToolbarAnchor = useCallback((id, rect) => {
+    setToolbarAnchors((prev) => ({
+      ...prev,
+      [id]: rect,
+    }));
   }, []);
 
   // Update a setting
@@ -87,6 +103,8 @@ export function AppProvider({ children }) {
     goHome,
     sidebarOpen,
     toggleSidebar,
+    toolbarAnchors,
+    setToolbarAnchor,
     darkMode,
     toggleDarkMode,
     announcements,

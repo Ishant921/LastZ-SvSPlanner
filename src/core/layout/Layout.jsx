@@ -1,5 +1,5 @@
 import React from "react";
-import { useApp } from "../context/AppContext";
+import { useLocation } from "react-router-dom";
 import TopBar from "./TopBar";
 import SideBar from "./SideBar";
 import BottomPanel from "./BottomPanel";
@@ -15,8 +15,8 @@ import BottomPanel from "./BottomPanel";
  *   - toolConfig: Toolbar configuration from the active tool
  */
 export default function Layout({ children, toolConfig }) {
-  const { currentTool } = useApp();
-  const isHome = currentTool === "home";
+  const location = useLocation();
+  const isHome = location.pathname === "/";
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-950 overflow-hidden">

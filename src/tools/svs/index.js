@@ -6,6 +6,7 @@ import SvsPlanner from "./SvsPlanner";
  */
 export const svsTool = {
   id: "svs",
+  route: "/svs", // NEW
   name: "SvS Planner",
   icon: "🗺️",
   description:

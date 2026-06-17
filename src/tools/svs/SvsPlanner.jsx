@@ -1,6 +1,5 @@
 import React from "react";
 import { useMediaQuery } from "../../core/hooks/useMediaQuery";
-import { ToolProvider } from "../../core/context/ToolContext";
 import SvsPlannerDesktop from "./SvsPlannerDesktop";
 import SvsPlannerMobile from "./SvsPlannerMobile";
 
@@ -14,9 +13,5 @@ import SvsPlannerMobile from "./SvsPlannerMobile";
 export default function SvsPlanner() {
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  return (
-    <ToolProvider>
-      {isMobile ? <SvsPlannerMobile /> : <SvsPlannerDesktop />}
-    </ToolProvider>
-  );
+  return isMobile ? <SvsPlannerMobile /> : <SvsPlannerDesktop />;
 }

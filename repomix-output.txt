@@ -86,6 +86,7 @@ src/
         LegendPanel.jsx
         MapsPanel.jsx
         PaintDropdown.jsx
+        PaintTools.jsx
       hooks/
         useHexState.js
         useMapActions.js
@@ -110,6 +111,144 @@ vite.config.js
 ================================================================
 Files
 ================================================================
+
+================
+File: src/tools/svs/components/PaintTools.jsx
+================
+import React from "react";
+import { PALETTE, ERASER, LABEL_TOOL } from "../constants";
+
+/**
+ * Paint tool controls:
+ * - Color palette
+ * - Eraser
+ * - Label tool
+ *
+ * Used by the Paint panel.
+ */
+export default function PaintTools({ selectedTool, setSelectedTool }) {
+  return (
+    <>
+      {/* Color palette */}
+      <div className="grid grid-cols-5 gap-1.5 mb-3">
+        {PALETTE.map((color) => (
+          <ColorSwatch
+            key={color}
+            color={color}
+            isActive={selectedTool === color}
+            onClick={() => setSelectedTool(color)}
+          />
+        ))}
+      </div>
+
+      {/* Eraser + Label */}
+      <div className="flex gap-1.5">
+        <SpecialTool
+          label="Eraser"
+          icon={
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path
+                d="M2 10L5 7M10 2L5 7M5 7L7 10H10M5 7L2 4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          }
+          isActive={selectedTool === ERASER}
+          onClick={() => setSelectedTool(ERASER)}
+        />
+
+        <SpecialTool
+          label="Label"
+          icon={
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path
+                d="M2 9.5V8L7.5 2.5L9.5 4.5L4 10H2.5L2 9.5Z"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M6.5 3.5L8.5 5.5"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
+            </svg>
+          }
+          isActive={selectedTool === LABEL_TOOL}
+          onClick={() => setSelectedTool(LABEL_TOOL)}
+        />
+      </div>
+    </>
+  );
+}
+
+function ColorSwatch({ color, isActive, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      title={color}
+      className="relative flex items-center justify-center rounded-md transition-all duration-150"
+      style={{
+        background: color,
+        width: "28px",
+        height: "28px",
+        borderRadius: "6px",
+        border: isActive
+          ? "2px solid rgba(255,255,255,0.9)"
+          : "2px solid transparent",
+        transform: isActive ? "scale(1.08)" : "scale(1)",
+        boxShadow: isActive
+          ? `0 0 0 2px ${color}55, 0 2px 8px ${color}44`
+          : "none",
+        transition: "all 0.15s ease",
+        flexShrink: 0,
+      }}
+    >
+      {isActive && (
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <path
+            d="M2 5L4 7L8 3"
+            stroke="rgba(0,0,0,0.7)"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+function SpecialTool({ label, icon, isActive, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex-1 flex items-center justify-center gap-1.5 rounded-md transition-all duration-150"
+      title={label}
+      style={{
+        height: "28px",
+        fontSize: "11px",
+        fontWeight: 500,
+        background: isActive
+          ? "rgba(99, 102, 241, 0.25)"
+          : "rgba(255,255,255,0.06)",
+        border: isActive
+          ? "1px solid rgba(99, 102, 241, 0.5)"
+          : "1px solid rgba(255,255,255,0.08)",
+        color: isActive ? "rgb(165, 180, 252)" : "rgba(255,255,255,0.45)",
+        transition: "all 0.15s ease",
+      }}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
 
 ================
 File: src/core/components/AnimatedPanel.jsx
@@ -690,6 +829,9 @@ export function AppProvider({ children }) {
   // Sidebar open state (mainly for mobile drawer)
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Toolbar button positions
+  const [toolbarAnchors, setToolbarAnchors] = useState({});
+
   // Announcements
   const [announcements, setAnnouncements] = useState(() => {
     return globalStorage.load("announcements", []);
@@ -719,6 +861,14 @@ export function AppProvider({ children }) {
   // Toggle sidebar
   const toggleSidebar = useCallback(() => {
     setSidebarOpen((prev) => !prev);
+  }, []);
+
+  // Register toolbar button position
+  const setToolbarAnchor = useCallback((id, rect) => {
+    setToolbarAnchors((prev) => ({
+      ...prev,
+      [id]: rect,
+    }));
   }, []);
 
   // Update a setting
@@ -753,6 +903,8 @@ export function AppProvider({ children }) {
     goHome,
     sidebarOpen,
     toggleSidebar,
+    toolbarAnchors,
+    setToolbarAnchor,
     darkMode,
     toggleDarkMode,
     announcements,
@@ -1315,8 +1467,9 @@ export default function SideBar() {
 ================
 File: src/core/layout/TopBar.jsx
 ================
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { useApp } from "../context/AppContext";
+import { useTool } from "../context/ToolContext";
 
 /**
  * Top navigation bar.
@@ -1335,10 +1488,32 @@ export default function TopBar({ toolConfig }) {
     toggleSidebar,
     darkMode,
     toggleDarkMode,
+    setToolbarAnchor,
   } = useApp();
 
   const isHome = currentTool === "home";
+  const { toolConfig: activeToolConfig, executeAction } = useTool();
   const toolName = toolConfig?.name || "LastZ Planner";
+  const toolbar = activeToolConfig?.toolbar || [];
+  const buttonRefs = useRef({});
+
+  useEffect(() => {
+    const updateAnchors = () => {
+      Object.entries(buttonRefs.current).forEach(([id, element]) => {
+        if (!element) return;
+
+        setToolbarAnchor(id, element.getBoundingClientRect());
+      });
+    };
+
+    updateAnchors();
+
+    window.addEventListener("resize", updateAnchors);
+
+    return () => {
+      window.removeEventListener("resize", updateAnchors);
+    };
+  }, [toolbar, setToolbarAnchor]);
 
   return (
     <header className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 shrink-0">
@@ -1372,12 +1547,15 @@ export default function TopBar({ toolConfig }) {
       </div>
 
       {/* Middle: Tool-specific buttons */}
-      {!isHome && toolConfig?.toolbar && (
+      {!isHome && toolbar.length > 0 && (
         <div className="hidden md:flex items-center gap-1">
-          {toolConfig.toolbar.map((button) => (
+          {toolbar.map((button) => (
             <button
               key={button.id}
-              onClick={() => toolConfig.onAction?.(button.id)}
+              ref={(el) => {
+                buttonRefs.current[button.id] = el;
+              }}
+              onClick={() => executeAction(button.id)}
               disabled={button.disabled}
               title={button.label}
               className={`px-3 h-9 rounded-xl transition text-sm font-medium ${
@@ -1690,86 +1868,134 @@ File: src/tools/svs/components/BrushPanel.jsx
 // tools/svs/components/BrushPanel.jsx
 import React from "react";
 import FloatingPanel from "./FloatingPanel";
+import PaintTools from "./PaintTools";
 
 /**
- * Redesigned BrushPanel — Linear/Figma HUD style.
+ * Paint Panel
  *
- * Changes:
- * - Dark frosted glass via FloatingPanel
- * - Size buttons rendered as visual hex-dot previews, not number buttons
- * - Slider replaced with a segmented pill selector for cleaner interaction
- * - Active state uses a soft indigo fill, not a ring
+ * Responsibilities:
+ * - Colors
+ * - Eraser / Label tools
+ * - Brush size selection
+ * - Brush preview
  */
-export default function BrushPanel({ brushSize, setBrushSize }) {
+export default function BrushPanel({
+  brushSize,
+  setBrushSize,
+  selectedTool,
+  setSelectedTool,
+}) {
   const sizes = [1, 2, 3, 4, 5];
 
   return (
-    <FloatingPanel
-      label="Brush"
-      width="w-44"
-      position="left"
-      defaultOpen={true}
-      top="top-4"
-    >
-      {/* Segmented size selector */}
-      <div
-        className="flex items-center justify-between"
-        style={{
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: "7px",
-          padding: "3px",
-          gap: "2px",
-        }}
-      >
-        {sizes.map((v) => (
-          <SizeButton
-            key={v}
-            size={v}
-            isActive={brushSize === v}
-            onClick={() => setBrushSize(v)}
+    <FloatingPanel label="Paint" width="w-[520px]" defaultOpen={true}>
+      <div className="flex gap-4 items-stretch">
+        {/* Left Side - Paint Tools */}
+        <div className="flex-[1.1]">
+          <PaintTools
+            selectedTool={selectedTool}
+            setSelectedTool={setSelectedTool}
           />
-        ))}
-      </div>
+        </div>
 
-      {/* Visual preview of brush size */}
-      <div
-        className="flex items-center justify-center mt-3"
-        style={{ height: "36px" }}
-      >
-        <BrushPreview size={brushSize} />
-      </div>
+        {/* Vertical Divider */}
+        <div
+          style={{
+            width: "1px",
+            background: "rgba(255,255,255,0.08)",
+            alignSelf: "stretch",
+          }}
+        />
 
-      {/* Label */}
-      <div
-        className="text-center mt-1"
-        style={{
-          fontSize: "10px",
-          color: "rgba(255,255,255,0.25)",
-          letterSpacing: "0.05em",
-        }}
-      >
-        {brushSize === 1 ? "Single hex" : `${brushSize}-hex radius`}
+        {/* Right Side - Brush Settings */}
+        <div className="flex-[0.9] flex flex-col">
+          <div
+            style={{
+              fontSize: "10px",
+              color: "rgba(255,255,255,0.35)",
+              letterSpacing: "0.08em",
+              marginBottom: "8px",
+            }}
+          >
+            BRUSH SIZE
+          </div>
+
+          <div
+            className="flex items-center justify-between"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: "7px",
+              padding: "3px",
+              gap: "2px",
+              marginBottom: "12px",
+            }}
+          >
+            {sizes.map((v) => (
+              <SizeButton
+                key={v}
+                size={v}
+                isActive={brushSize === v}
+                onClick={() => setBrushSize(v)}
+              />
+            ))}
+          </div>
+
+          <div
+            style={{
+              height: "1px",
+              background: "rgba(255,255,255,0.06)",
+              marginBottom: "10px",
+            }}
+          />
+
+          <div
+            style={{
+              fontSize: "10px",
+              color: "rgba(255,255,255,0.35)",
+              letterSpacing: "0.08em",
+              marginBottom: "8px",
+            }}
+          >
+            PREVIEW
+          </div>
+
+          <div className="flex justify-center">
+            <BrushPreview size={brushSize} />
+          </div>
+
+          <div
+            className="text-center mt-2"
+            style={{
+              fontSize: "10px",
+              color: "rgba(255,255,255,0.25)",
+            }}
+          >
+            {brushSize === 1 ? "Single hex" : `${brushSize}-hex radius`}
+          </div>
+        </div>
       </div>
     </FloatingPanel>
   );
 }
 
-/** Segmented pill button for a size value */
+/** Brush size button */
 function SizeButton({ size, isActive, onClick }) {
   return (
     <button
       onClick={onClick}
       style={{
         flex: 1,
-        height: "26px",
-        borderRadius: "5px",
+        height: "30px",
+        borderRadius: "6px",
         fontSize: "11px",
         fontWeight: 600,
-        background: isActive ? "rgba(99, 102, 241, 0.3)" : "transparent",
+        background: isActive
+          ? "rgba(99, 102, 241, 0.3)"
+          : "rgba(255,255,255,0.04)",
         border: isActive
           ? "1px solid rgba(99, 102, 241, 0.5)"
-          : "1px solid transparent",
+          : "1px solid rgba(255,255,255,0.08)",
         color: isActive ? "rgb(165, 180, 252)" : "rgba(255,255,255,0.35)",
         transition: "all 0.15s ease",
         cursor: "pointer",
@@ -1782,10 +2008,8 @@ function SizeButton({ size, isActive, onClick }) {
 
 /**
  * Visual dot preview showing brush coverage.
- * Renders a small hex-dot cluster to represent the selected radius.
  */
 function BrushPreview({ size }) {
-  // Dot grid: render a diamond of dots up to `size` radius
   const dots = [];
   const r = size - 1;
   const dotSize = Math.max(3, 6 - r);
@@ -1795,25 +2019,32 @@ function BrushPreview({ size }) {
     for (let dr = -r; dr <= r; dr++) {
       const ds = -dq - dr;
       if (Math.abs(ds) > r) continue;
-      // Offset layout: axial to pixel (flat-top)
+
       const x = gap * (dq + dr / 2);
       const y = gap * 0.866 * dr;
-      dots.push({ x, y, key: `${dq},${dr}`, isCenter: dq === 0 && dr === 0 });
+
+      dots.push({
+        x,
+        y,
+        key: `${dq},${dr}`,
+        isCenter: dq === 0 && dr === 0,
+      });
     }
   }
 
-  // Center the preview
   const xs = dots.map((d) => d.x);
   const ys = dots.map((d) => d.y);
+
   const minX = Math.min(...xs);
   const maxX = Math.max(...xs);
   const minY = Math.min(...ys);
   const maxY = Math.max(...ys);
+
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
 
   return (
-    <svg width="80" height="36" viewBox="-40 -18 80 36">
+    <svg width="80" height="50" viewBox="-40 -25 80 50">
       {dots.map((d) => (
         <circle
           key={d.key}
@@ -1833,29 +2064,21 @@ File: src/tools/svs/components/FloatingPanel.jsx
 import React, { useState } from "react";
 
 /**
- * Redesigned FloatingPanel — Linear/Figma-style HUD panel.
+ * Generic floating glass panel.
  *
- * Changes from original:
- * - Frosted glass surface with backdrop-blur
- * - Razor-thin border, elevated shadow
- * - Proper floating position (not edge-attached)
- * - Clean chevron toggle tab instead of emoji
+ * Positioning is handled by the parent component.
+ * This component only renders the panel UI and collapse behavior.
  */
 export default function FloatingPanel({
   children,
   label,
   width = "w-56",
-  position = "left",
   defaultOpen = true,
-  top = "top-4",
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const isLeft = position === "left";
 
   return (
-    <div
-      className={`absolute ${top} ${isLeft ? "left-3" : "right-3"} z-10 flex items-start gap-0`}
-    >
+    <div className="z-10 flex items-start gap-0">
       {/* Panel body */}
       <div
         className={`
@@ -1864,9 +2087,7 @@ export default function FloatingPanel({
           ${
             open
               ? "opacity-100 translate-x-0 pointer-events-auto"
-              : isLeft
-                ? "opacity-0 -translate-x-2 pointer-events-none"
-                : "opacity-0 translate-x-2 pointer-events-none"
+              : "opacity-0 -translate-x-2 pointer-events-none"
           }
         `}
         style={{
@@ -1878,7 +2099,6 @@ export default function FloatingPanel({
           boxShadow: "0 4px 24px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.2)",
         }}
       >
-        {/* Panel header */}
         {label && (
           <div
             className="px-3 pt-3 pb-2 flex items-center justify-between"
@@ -1893,7 +2113,6 @@ export default function FloatingPanel({
           </div>
         )}
 
-        {/* Content */}
         <div className="px-3 py-3">{children}</div>
       </div>
 
@@ -1903,7 +2122,7 @@ export default function FloatingPanel({
         className={`
           flex-shrink-0 flex items-center justify-center
           transition-all duration-200 hover:opacity-100
-          ${isLeft ? "ml-1" : "mr-1 order-first"}
+          ml-1
           ${open ? "opacity-40" : "opacity-80"}
         `}
         style={{
@@ -1919,7 +2138,7 @@ export default function FloatingPanel({
         }}
         title={open ? "Collapse" : "Expand"}
       >
-        {isLeft ? (open ? "‹" : "›") : open ? "›" : "‹"}
+        {open ? "‹" : "›"}
       </button>
     </div>
   );
@@ -1987,30 +2206,47 @@ export default function HexCanvas({
 ================
 File: src/tools/svs/components/LegendCornerPanel.jsx
 ================
+import React from "react";
 
+export default function LegendCornerPanel({ open, onToggle }) {
+  return (
+    <button
+      onClick={onToggle}
+      title={open ? "Hide legend" : "Show legend"}
+      className="absolute bottom-4 right-4 z-20
+                 w-11 h-11 rounded-full
+                 flex items-center justify-center
+                 shadow-lg backdrop-blur-md
+                 transition-all duration-150"
+      style={{
+        background: "rgba(15,17,21,0.82)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        color: "rgba(255,255,255,0.85)",
+      }}
+    >
+      ⓘ
+    </button>
+  );
+}
 
 ================
 File: src/tools/svs/components/LegendPanel.jsx
 ================
 // tools/svs/components/LegendPanel.jsx
 import React from "react";
-import { PALETTE, ERASER, LABEL_TOOL } from "../constants";
+import { PALETTE } from "../constants";
 import FloatingPanel from "./FloatingPanel";
 
 /**
- * Redesigned LegendPanel — Linear/Figma HUD style.
+ * Legend Panel
  *
- * Changes:
- * - Dark frosted glass surface (via FloatingPanel)
- * - Color swatches in a tighter grid with checkmark active state
- * - Eraser/Label as icon-only pill buttons
- * - Legend rows use a 2px left color bar instead of a dot square
- * - Hex counts in a monospaced badge on the right
- * - Section dividers use subtle opacity lines
+ * Responsibilities:
+ * - Show territory legend
+ * - Show hex counts
+ * - Rename legend entries
  */
 export default function LegendPanel({
   selectedTool,
-  setSelectedTool,
   legend,
   counts,
   editingLegend,
@@ -2020,77 +2256,7 @@ export default function LegendPanel({
   onLegendSave,
 }) {
   return (
-    <FloatingPanel
-      label="Tools & Legend"
-      width="w-64"
-      position="right"
-      defaultOpen={true}
-      top="top-4"
-    >
-      {/* Color palette grid */}
-      <div className="grid grid-cols-7 gap-1.5 mb-3">
-        {PALETTE.map((color) => (
-          <ColorSwatch
-            key={color}
-            color={color}
-            isActive={selectedTool === color}
-            onClick={() => setSelectedTool(color)}
-          />
-        ))}
-      </div>
-
-      {/* Eraser + Label tools */}
-      <div className="flex gap-1.5 mb-3">
-        <SpecialTool
-          label="Eraser"
-          icon={
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path
-                d="M2 10L5 7M10 2L5 7M5 7L7 10H10M5 7L2 4"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          }
-          isActive={selectedTool === ERASER}
-          onClick={() => setSelectedTool(ERASER)}
-        />
-        <SpecialTool
-          label="Label"
-          icon={
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path
-                d="M2 9.5V8L7.5 2.5L9.5 4.5L4 10H2.5L2 9.5Z"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M6.5 3.5L8.5 5.5"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-              />
-            </svg>
-          }
-          isActive={selectedTool === LABEL_TOOL}
-          onClick={() => setSelectedTool(LABEL_TOOL)}
-        />
-      </div>
-
-      {/* Divider */}
-      <div
-        style={{
-          height: "1px",
-          background: "rgba(255,255,255,0.06)",
-          marginBottom: "10px",
-        }}
-      />
-
-      {/* Legend rows */}
+    <FloatingPanel label="Legend" width="w-64" defaultOpen={true}>
       <div className="space-y-1">
         {PALETTE.map((color) => (
           <LegendRow
@@ -2111,72 +2277,6 @@ export default function LegendPanel({
         ))}
       </div>
     </FloatingPanel>
-  );
-}
-
-/** Color swatch with checkmark active state */
-function ColorSwatch({ color, isActive, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{ background: color }}
-      className="relative flex items-center justify-center rounded-md transition-all duration-150"
-      title={color}
-      style={{
-        background: color,
-        width: "28px",
-        height: "28px",
-        borderRadius: "6px",
-        border: isActive
-          ? "2px solid rgba(255,255,255,0.9)"
-          : "2px solid transparent",
-        transform: isActive ? "scale(1.08)" : "scale(1)",
-        boxShadow: isActive
-          ? `0 0 0 2px ${color}55, 0 2px 8px ${color}44`
-          : "none",
-        transition: "all 0.15s ease",
-        flexShrink: 0,
-      }}
-    >
-      {isActive && (
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-          <path
-            d="M2 5L4 7L8 3"
-            stroke="rgba(0,0,0,0.7)"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      )}
-    </button>
-  );
-}
-
-/** Eraser / Label tool button */
-function SpecialTool({ label, icon, isActive, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex-1 flex items-center justify-center gap-1.5 rounded-md transition-all duration-150"
-      title={label}
-      style={{
-        height: "28px",
-        fontSize: "11px",
-        fontWeight: 500,
-        background: isActive
-          ? "rgba(99, 102, 241, 0.25)"
-          : "rgba(255,255,255,0.06)",
-        border: isActive
-          ? "1px solid rgba(99, 102, 241, 0.5)"
-          : "1px solid rgba(255,255,255,0.08)",
-        color: isActive ? "rgb(165, 180, 252)" : "rgba(255,255,255,0.45)",
-        transition: "all 0.15s ease",
-      }}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
   );
 }
 
@@ -2214,7 +2314,7 @@ function LegendRow({
         }}
       />
 
-      {/* Name — editable inline */}
+      {/* Name */}
       {isEditing ? (
         <input
           autoFocus
@@ -2250,7 +2350,7 @@ function LegendRow({
         </span>
       )}
 
-      {/* Hex count badge */}
+      {/* Count */}
       <span
         style={{
           fontSize: "10px",
@@ -2297,13 +2397,7 @@ export default function MapsPanel({ onSave, onLoad, onDelete, refreshKey }) {
   }, [refreshKey]);
 
   return (
-    <FloatingPanel
-      label="Saved Maps"
-      width="w-52"
-      position="left"
-      defaultOpen={true}
-      top="top-4"
-    >
+    <FloatingPanel label="Saved Maps" width="w-64" defaultOpen={true}>
       {/* Save button */}
       <button
         onClick={onSave}
@@ -3248,7 +3342,6 @@ File: src/tools/svs/SvsPlanner.jsx
 ================
 import React from "react";
 import { useMediaQuery } from "../../core/hooks/useMediaQuery";
-import { ToolProvider } from "../../core/context/ToolContext";
 import SvsPlannerDesktop from "./SvsPlannerDesktop";
 import SvsPlannerMobile from "./SvsPlannerMobile";
 
@@ -3262,19 +3355,16 @@ import SvsPlannerMobile from "./SvsPlannerMobile";
 export default function SvsPlanner() {
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  return (
-    <ToolProvider>
-      {isMobile ? <SvsPlannerMobile /> : <SvsPlannerDesktop />}
-    </ToolProvider>
-  );
+  return isMobile ? <SvsPlannerMobile /> : <SvsPlannerDesktop />;
 }
 
 ================
 File: src/tools/svs/SvsPlannerDesktop.jsx
 ================
 // tools/svs/SvsPlannerDesktop.jsx
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useTool } from "../../core/context/ToolContext";
+import { useApp } from "../../core/context/AppContext";
 import { useViewport } from "../../core/hooks/useViewport";
 import { useHexState } from "./hooks/useHexState";
 import { useMapManager } from "./hooks/useMapManager";
@@ -3284,14 +3374,18 @@ import { exportToPng } from "./utils/exportSvg";
 import HexCanvas from "./components/HexCanvas";
 import BrushPanel from "./components/BrushPanel";
 import LegendPanel from "./components/LegendPanel";
+import LegendCornerPanel from "./components/LegendCornerPanel";
 import MapsPanel from "./components/MapsPanel";
 import PopupManager from "../../core/components/PopupManager";
 import Toast from "../../core/components/Toast";
 
 export default function SvsPlannerDesktop() {
   const baseSize = 20;
+  const containerRef = useRef(null);
   const viewport = useViewport();
   const [hovered, setHovered] = useState(null);
+  const [activePanel, setActivePanel] = useState(null);
+  const [showLegend, setShowLegend] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [hideUI, setHideUI] = useState(false);
   const [showReset, setShowReset] = useState(false);
@@ -3301,8 +3395,28 @@ export default function SvsPlannerDesktop() {
   const toast = useToast();
   const mapActions = useMapActions({ hex, maps, toast });
   const { registerTool, updateState } = useTool();
+  const { toolbarAnchors } = useApp();
 
   const size = baseSize * viewport.zoom;
+  const paintAnchor = toolbarAnchors.paint;
+  const mapsAnchor = toolbarAnchors.maps;
+
+  const getPanelPosition = useCallback((anchor) => {
+    if (!anchor || !containerRef.current) {
+      return { left: 0, top: 0 };
+    }
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+
+    return {
+      left: anchor.left - containerRect.left + anchor.width / 2,
+
+      top: anchor.bottom - containerRect.top + 8,
+    };
+  }, []);
+
+  const paintPosition = getPanelPosition(paintAnchor);
+  const mapsPosition = getPanelPosition(mapsAnchor);
 
   // Register tool actions with TopBar
   useEffect(() => {
@@ -3310,7 +3424,8 @@ export default function SvsPlannerDesktop() {
       actions: {
         undo: hex.handleUndo,
         export: handleExport,
-        hideUI: handleHideUI,
+        paint: () => handleTogglePanel("paint"),
+        maps: () => handleTogglePanel("maps"),
         reset: () => setShowReset(true),
       },
       state: {
@@ -3318,9 +3433,11 @@ export default function SvsPlannerDesktop() {
         isExporting: exporting,
       },
       toolbar: [
+        { id: "paint", icon: "🎨", label: "Paint" },
+        { id: "maps", icon: "🗺", label: "Maps" },
+
         { id: "undo", icon: "↩", label: "Undo", disabled: !hex.history.length },
         { id: "export", icon: "📷", label: "Export", disabled: exporting },
-        { id: "hideUI", icon: "🙈", label: "Hide UI" },
         { id: "reset", icon: "🗑", label: "Reset", danger: true },
       ],
     });
@@ -3352,6 +3469,10 @@ export default function SvsPlannerDesktop() {
     setTimeout(() => setHideUI(false), 4000);
   }, []);
 
+  const handleTogglePanel = useCallback((panelId) => {
+    setActivePanel((prev) => (prev === panelId ? null : panelId));
+  }, []);
+
   const handleHexClick = useCallback(
     (key) => {
       const [q, r] = key.split(",").map(Number);
@@ -3366,6 +3487,7 @@ export default function SvsPlannerDesktop() {
 
   return (
     <div
+      ref={containerRef}
       className="w-full h-full bg-gray-50 dark:bg-gray-950 relative touch-none overflow-hidden"
       onWheel={viewport.handleWheel}
       onMouseMove={viewport.handleMouseMove}
@@ -3381,30 +3503,63 @@ export default function SvsPlannerDesktop() {
         </div>
       )}
 
+      {!hideUI && (
+        <LegendCornerPanel
+          open={showLegend}
+          onToggle={() => setShowLegend((v) => !v)}
+        />
+      )}
+
       {/* Floating panels */}
       {!hideUI && (
         <>
-          <BrushPanel
-            brushSize={hex.brushSize}
-            setBrushSize={hex.setBrushSize}
-          />
-          <LegendPanel
-            selectedTool={hex.selectedTool}
-            setSelectedTool={hex.setSelectedTool}
-            legend={hex.legend}
-            counts={hex.counts}
-            editingLegend={hex.editingLegend}
-            editingLegendText={hex.editingLegendText}
-            setEditingLegend={hex.setEditingLegend}
-            setEditingLegendText={hex.setEditingLegendText}
-            onLegendSave={hex.handleLegendSave}
-          />
-          <MapsPanel
-            onSave={maps.handleSaveMap}
-            onLoad={maps.handleLoadRequest}
-            onDelete={maps.handleDeleteRequest}
-            refreshKey={maps.mapsRefresh}
-          />
+          {activePanel === "paint" && paintAnchor && (
+            <div
+              className="absolute z-20 -translate-x-1/2"
+              style={{
+                left: paintPosition.left,
+                top: paintPosition.top,
+              }}
+            >
+              <BrushPanel
+                brushSize={hex.brushSize}
+                setBrushSize={hex.setBrushSize}
+                selectedTool={hex.selectedTool}
+                setSelectedTool={hex.setSelectedTool}
+              />
+            </div>
+          )}
+          {showLegend && (
+            <div className="absolute bottom-20 right-4 z-20">
+              <LegendPanel
+                selectedTool={hex.selectedTool}
+                setSelectedTool={hex.setSelectedTool}
+                legend={hex.legend}
+                counts={hex.counts}
+                editingLegend={hex.editingLegend}
+                editingLegendText={hex.editingLegendText}
+                setEditingLegend={hex.setEditingLegend}
+                setEditingLegendText={hex.setEditingLegendText}
+                onLegendSave={hex.handleLegendSave}
+              />
+            </div>
+          )}
+          {activePanel === "maps" && mapsAnchor && (
+            <div
+              className="absolute z-20 -translate-x-1/2"
+              style={{
+                left: mapsPosition.left,
+                top: mapsPosition.top,
+              }}
+            >
+              <MapsPanel
+                onSave={maps.handleSaveMap}
+                onLoad={maps.handleLoadRequest}
+                onDelete={maps.handleDeleteRequest}
+                refreshKey={maps.mapsRefresh}
+              />
+            </div>
+          )}
         </>
       )}
 
@@ -3779,6 +3934,26 @@ export const toolRegistry = {
 export { svsTool } from "./svs";
 
 ================
+File: .gitignore
+================
+node_modules/
+
+================
+File: README.md
+================
+# LastZ-SvSPlanner
+
+================
+File: vite.config.js
+================
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+})
+
+================
 File: src/main.jsx
 ================
 import React from "react";
@@ -3788,11 +3963,6 @@ import App from "./app.jsx";
 ReactDOM.createRoot(document.getElementById("root")).render(
   React.createElement(App),
 );
-
-================
-File: .gitignore
-================
-node_modules/
 
 ================
 File: package.json
@@ -3817,25 +3987,11 @@ File: package.json
 }
 
 ================
-File: README.md
-================
-# LastZ-SvSPlanner
-
-================
-File: vite.config.js
-================
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-})
-
-================
 File: src/app.jsx
 ================
 import React, { useState } from "react";
 import { AppProvider } from "./core/context/AppContext";
+import { ToolProvider } from "./core/context/ToolContext";
 import { useApp } from "./core/context/AppContext";
 import { toolRegistry } from "./tools";
 import Layout from "./core/layout/Layout";
@@ -3875,7 +4031,9 @@ function AppInner() {
 export default function App() {
   return (
     <AppProvider>
-      <AppInner />
+      <ToolProvider>
+        <AppInner />
+      </ToolProvider>
     </AppProvider>
   );
 }

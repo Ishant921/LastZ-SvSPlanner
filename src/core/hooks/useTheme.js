@@ -9,7 +9,7 @@ export function useTheme() {
   const globalStorage = useStorage("global");
 
   const [darkMode, setDarkMode] = useState(() => {
-    return globalStorage.load("darkdarkMode", false);
+    return globalStorage.load("darkMode", false);
   });
 
   // Apply dark mode to document

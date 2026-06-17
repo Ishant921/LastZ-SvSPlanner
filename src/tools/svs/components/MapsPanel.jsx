@@ -24,13 +24,7 @@ export default function MapsPanel({ onSave, onLoad, onDelete, refreshKey }) {
   }, [refreshKey]);
 
   return (
-    <FloatingPanel
-      label="Saved Maps"
-      width="w-52"
-      position="left"
-      defaultOpen={true}
-      top="top-4"
-    >
+    <FloatingPanel label="Saved Maps" width="w-64" defaultOpen={true}>
       {/* Save button */}
       <button
         onClick={onSave}
