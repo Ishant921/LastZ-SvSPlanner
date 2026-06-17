@@ -1,0 +1,3918 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+================================================================
+File Summary
+================================================================
+
+Purpose:
+--------
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+
+File Format:
+------------
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  a. A separator line (================)
+  b. The file path (File: path/to/file)
+  c. Another separator line
+  d. The full contents of the file
+  e. A blank line
+
+Usage Guidelines:
+-----------------
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+
+Notes:
+------
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+
+
+================================================================
+Directory Structure
+================================================================
+src/
+  core/
+    components/
+      AnimatedPanel.jsx
+      ErrorBoundary.jsx
+      LoadingScreen.jsx
+      PopupManager.jsx
+      Popups.jsx
+      Toast.jsx
+    context/
+      AppContext.jsx
+      ToolContext.jsx
+    hooks/
+      useMediaQuery.js
+      useStorage.js
+      useTheme.js
+      useToast.js
+      useToolActions.js
+      useViewport.js
+    layout/
+      BottomPanel.jsx
+      Layout.jsx
+      SideBar.jsx
+      TopBar.jsx
+    utils/
+      animation.js
+      constants.js
+      storage.js
+  pages/
+    LandingPage.jsx
+  tools/
+    svs/
+      components/
+        BrushDropdown.jsx
+        BrushPanel.jsx
+        FloatingPanel.jsx
+        HexCanvas.jsx
+        LegendCornerPanel.jsx
+        LegendPanel.jsx
+        MapsPanel.jsx
+        PaintDropdown.jsx
+      hooks/
+        useHexState.js
+        useMapActions.js
+        useMapManager.js
+      utils/
+        exportSvg.js
+        hexMath.js
+      constants.js
+      index.js
+      SvsPlanner.jsx
+      SvsPlannerDesktop.jsx
+      SvsPlannerMobile.jsx
+    index.js
+  app.jsx
+  main.jsx
+.gitignore
+index.html
+package.json
+README.md
+vite.config.js
+
+================================================================
+Files
+================================================================
+
+================
+File: src/core/components/AnimatedPanel.jsx
+================
+import React from "react";
+
+/**
+ * Reusable animated panel wrapper.
+ * Slides in from a direction with smooth transition.
+ *
+ * Props:
+ *   - isOpen: boolean - Whether panel is visible
+ *   - direction: 'left' | 'right' | 'bottom' | 'top' - Slide direction
+ *   - children: React node - Content inside the panel
+ *   - className: string - Additional CSS classes
+ */
+export default function AnimatedPanel({
+  isOpen,
+  direction = "right",
+  children,
+  className = "",
+}) {
+  // Transform values for each direction
+  const transforms = {
+    left: isOpen ? "translateX(0)" : "translateX(-100%)",
+    right: isOpen ? "translateX(0)" : "translateX(100%)",
+    bottom: isOpen ? "translateY(0)" : "translateY(100%)",
+    top: isOpen ? "translateY(0)" : "translateY(-100%)",
+  };
+
+  return (
+    <div
+      className={`transition-transform duration-300 ease-out ${className}`}
+      style={{
+        transform: transforms[direction],
+        willChange: "transform",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+================
+File: src/core/components/ErrorBoundary.jsx
+================
+import React, { Component } from "react";
+
+/**
+ * Error boundary that catches crashes in its child components.
+ * Shows a friendly error UI instead of breaking the whole website.
+ *
+ * Usage:
+ *   <ErrorBoundary onReset={() => setKey(key + 1)}>
+ *     <MyTool />
+ *   </ErrorBoundary>
+ *
+ * Props:
+ *   - children: The component tree to protect
+ *   - onReset: Callback to reset the error state (e.g., increment a key)
+ */
+export default class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, showDetails: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Error caught by boundary:", error, errorInfo);
+  }
+
+  handleReset = () => {
+    this.setState({ hasError: false, error: null, showDetails: false });
+    this.props.onReset?.();
+  };
+
+  toggleDetails = () => {
+    this.setState((prev) => ({ showDetails: !prev.showDetails }));
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-sm z-50">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl px-8 py-6 max-w-md mx-4 text-center">
+            {/* Error icon */}
+            <div className="text-4xl mb-4">⚠️</div>
+
+            {/* Message */}
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">
+              Something went wrong
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              This tool encountered an error. You can try reloading it.
+            </p>
+
+            {/* Actions */}
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={this.handleReset}
+                className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition"
+              >
+                Reload Tool
+              </button>
+            </div>
+
+            {/* Details toggle */}
+            <button
+              onClick={this.toggleDetails}
+              className="mt-4 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+            >
+              {this.state.showDetails ? "Hide details" : "Show details"}
+            </button>
+
+            {/* Technical details */}
+            {this.state.showDetails && this.state.error && (
+              <div className="mt-3 text-left">
+                <pre className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg p-3 overflow-auto max-h-32">
+                  {this.state.error.toString()}
+                </pre>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+================
+File: src/core/components/LoadingScreen.jsx
+================
+import React, { useMemo } from "react";
+import { LOADING_TIPS } from "../utils/constants";
+
+/**
+ * Loading screen shown while a tool is loading.
+ * Displays a spinner, tool name, and a random helpful tip.
+ *
+ * Props:
+ *   - toolName: string - Name of the tool being loaded
+ */
+export default function LoadingScreen({ toolName }) {
+  // Pick a random tip that stays consistent during this load
+  const tip = useMemo(() => {
+    const index = Math.floor(Math.random() * LOADING_TIPS.length);
+    return LOADING_TIPS[index];
+  }, []);
+
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950 z-40">
+      {/* Spinner */}
+      <div className="w-12 h-12 border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-500 rounded-full animate-spin mb-6" />
+
+      {/* Tool name */}
+      <div className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+        Loading {toolName}...
+      </div>
+
+      {/* Tip */}
+      <div className="text-sm text-gray-500 dark:text-gray-400 max-w-md text-center px-4">
+        {tip}
+      </div>
+    </div>
+  );
+}
+
+================
+File: src/core/components/PopupManager.jsx
+================
+import {
+  LabelPopup,
+  ResetConfirmPopup,
+  ExportingOverlay,
+  SaveMapPopup,
+  OverwriteConfirmPopup,
+  LoadMapPopup,
+  DeleteMapPopup,
+} from "./Popups";
+
+export default function PopupManager({
+  hex,
+  maps,
+  mapActions,
+  exporting,
+  showReset,
+  setShowReset,
+}) {
+  const {
+    labelInput,
+    labelText,
+    setLabelText,
+    handleLabelSubmit,
+    setLabelInput,
+    handleReset,
+  } = hex;
+
+  const {
+    mapName,
+    setMapName,
+
+    pendingMapName,
+    setPendingMapName,
+
+    selectedMap,
+    setSelectedMap,
+
+    showSavePopup,
+    setShowSavePopup,
+
+    showOverwritePopup,
+    setShowOverwritePopup,
+
+    showLoadPopup,
+    setShowLoadPopup,
+
+    showDeletePopup,
+    setShowDeletePopup,
+  } = maps;
+
+  return (
+    <>
+      {labelInput && (
+        <LabelPopup
+          labelText={labelText}
+          setLabelText={setLabelText}
+          onSubmit={handleLabelSubmit}
+          onCancel={() => {
+            setLabelInput(null);
+            setLabelText("");
+          }}
+        />
+      )}
+
+      {showReset && (
+        <ResetConfirmPopup
+          onConfirm={() => {
+            handleReset();
+            setShowReset(false);
+          }}
+          onCancel={() => setShowReset(false)}
+        />
+      )}
+
+      {showSavePopup && (
+        <SaveMapPopup
+          mapName={mapName}
+          setMapName={setMapName}
+          onSave={mapActions.confirmSaveMap}
+          onCancel={() => {
+            setShowSavePopup(false);
+            setMapName("");
+          }}
+        />
+      )}
+
+      {showOverwritePopup && (
+        <OverwriteConfirmPopup
+          mapName={pendingMapName}
+          onConfirm={mapActions.overwriteMap}
+          onCancel={() => {
+            setShowOverwritePopup(false);
+            setPendingMapName("");
+          }}
+        />
+      )}
+
+      {showLoadPopup && (
+        <LoadMapPopup
+          mapName={selectedMap}
+          onConfirm={mapActions.confirmLoadMap}
+          onCancel={() => {
+            setShowLoadPopup(false);
+            setSelectedMap("");
+          }}
+        />
+      )}
+
+      {showDeletePopup && (
+        <DeleteMapPopup
+          mapName={selectedMap}
+          onConfirm={mapActions.confirmDeleteMap}
+          onCancel={() => {
+            setShowDeletePopup(false);
+            setSelectedMap("");
+          }}
+        />
+      )}
+
+      {exporting && <ExportingOverlay />}
+    </>
+  );
+}
+
+================
+File: src/core/components/Popups.jsx
+================
+import React, { useRef, useEffect } from "react";
+
+function PopupBase({ children }) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/20 backdrop-blur-sm">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl px-6 py-5 w-80 animate-fade-in">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function PopupTitle({ children }) {
+  return (
+    <div className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">
+      {children}
+    </div>
+  );
+}
+
+function PopupDesc({ children }) {
+  return (
+    <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+      {children}
+    </div>
+  );
+}
+
+function PopupActions({ children }) {
+  return <div className="flex gap-2 mt-2">{children}</div>;
+}
+
+function PrimaryBtn({ onClick, disabled, children }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="flex-1 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white rounded-xl py-2 text-sm font-semibold transition"
+    >
+      {children}
+    </button>
+  );
+}
+
+function DangerBtn({ onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-xl py-2 text-sm font-semibold transition"
+    >
+      {children}
+    </button>
+  );
+}
+
+function CancelBtn({ onClick, children = "Cancel" }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl py-2 text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+    >
+      {children}
+    </button>
+  );
+}
+
+function TextInput({ value, onChange, onKeyDown, placeholder, autoFocus }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (autoFocus && ref.current) ref.current.focus();
+  }, [autoFocus]);
+  return (
+    <input
+      ref={ref}
+      className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm mb-3 outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-gray-800 dark:text-gray-200"
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      onKeyDown={onKeyDown}
+    />
+  );
+}
+
+export function LabelPopup({ labelText, setLabelText, onSubmit, onCancel }) {
+  return (
+    <PopupBase>
+      <PopupTitle>Add Label</PopupTitle>
+      <PopupDesc>Type a label for this hex. Leave empty to remove.</PopupDesc>
+      <TextInput
+        autoFocus
+        placeholder="e.g. R5 Rally"
+        value={labelText}
+        onChange={(e) => setLabelText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onSubmit();
+        }}
+      />
+      <PopupActions>
+        <PrimaryBtn onClick={onSubmit}>Save</PrimaryBtn>
+        <CancelBtn onClick={onCancel} />
+      </PopupActions>
+    </PopupBase>
+  );
+}
+
+export function ResetConfirmPopup({ onConfirm, onCancel }) {
+  return (
+    <PopupBase>
+      <PopupTitle>Reset Map?</PopupTitle>
+      <PopupDesc>
+        This will clear all painted hexes and labels. Protected zones stay
+        intact.
+      </PopupDesc>
+      <PopupActions>
+        <DangerBtn onClick={onConfirm}>Yes, Reset</DangerBtn>
+        <CancelBtn onClick={onCancel} />
+      </PopupActions>
+    </PopupBase>
+  );
+}
+
+export function SaveMapPopup({ mapName, setMapName, onSave, onCancel }) {
+  return (
+    <PopupBase>
+      <PopupTitle>Save Map</PopupTitle>
+      <PopupDesc>Give your map a name to save it.</PopupDesc>
+      <TextInput
+        autoFocus
+        placeholder="e.g. Week 3 SvS Plan"
+        value={mapName}
+        onChange={(e) => setMapName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onSave();
+        }}
+      />
+      <PopupActions>
+        <PrimaryBtn onClick={onSave} disabled={!mapName.trim()}>
+          Save
+        </PrimaryBtn>
+        <CancelBtn onClick={onCancel} />
+      </PopupActions>
+    </PopupBase>
+  );
+}
+
+export function OverwriteConfirmPopup({ mapName, onConfirm, onCancel }) {
+  return (
+    <PopupBase>
+      <PopupTitle>Overwrite "{mapName}"?</PopupTitle>
+      <PopupDesc>
+        A map with this name already exists. This will replace it.
+      </PopupDesc>
+      <PopupActions>
+        <DangerBtn onClick={onConfirm}>Overwrite</DangerBtn>
+        <CancelBtn onClick={onCancel} />
+      </PopupActions>
+    </PopupBase>
+  );
+}
+
+export function LoadMapPopup({ mapName, onConfirm, onCancel }) {
+  return (
+    <PopupBase>
+      <PopupTitle>Load "{mapName}"?</PopupTitle>
+      <PopupDesc>
+        This will replace your current map. Unsaved changes will be lost.
+      </PopupDesc>
+      <PopupActions>
+        <PrimaryBtn onClick={onConfirm}>Load</PrimaryBtn>
+        <CancelBtn onClick={onCancel} />
+      </PopupActions>
+    </PopupBase>
+  );
+}
+
+export function DeleteMapPopup({ mapName, onConfirm, onCancel }) {
+  return (
+    <PopupBase>
+      <PopupTitle>Delete "{mapName}"?</PopupTitle>
+      <PopupDesc>This action cannot be undone.</PopupDesc>
+      <PopupActions>
+        <DangerBtn onClick={onConfirm}>Delete</DangerBtn>
+        <CancelBtn onClick={onCancel} />
+      </PopupActions>
+    </PopupBase>
+  );
+}
+
+export function ExportingOverlay() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/20 backdrop-blur-sm">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl px-8 py-6 flex flex-col items-center gap-3">
+        <div className="text-2xl animate-spin">⏳</div>
+        <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          Generating image...
+        </div>
+      </div>
+    </div>
+  );
+}
+
+================
+File: src/core/components/Toast.jsx
+================
+import React from "react";
+
+/**
+ * Toast notification component.
+ * Shows a temporary message at the top-right of the screen.
+ *
+ * Props:
+ *   - toast: { message: string, type: 'success' | 'danger' | 'info' | 'default' } | null
+ */
+export default function Toast({ toast }) {
+  const backgroundColors = {
+    success: "bg-green-500",
+    danger: "bg-red-500",
+    info: "bg-blue-500",
+    default: "bg-white dark:bg-gray-800",
+  };
+
+  const textColors = {
+    success: "text-white",
+    danger: "text-white",
+    info: "text-white",
+    default: "text-gray-800 dark:text-gray-200",
+  };
+
+  const bgClass = backgroundColors[toast?.type || "default"];
+  const textClass = textColors[toast?.type || "default"];
+
+  return (
+    <div
+      className={`fixed top-4 right-4 z-50 transition-all duration-300 ${
+        toast
+          ? "opacity-100 translate-x-0"
+          : "opacity-0 translate-x-8 pointer-events-none"
+      }`}
+    >
+      <div
+        className={`${bgClass} ${textClass} shadow-lg rounded-xl px-4 py-3 text-sm font-medium`}
+      >
+        {toast?.message}
+      </div>
+    </div>
+  );
+}
+
+================
+File: src/core/context/AppContext.jsx
+================
+import React, { createContext, useContext, useState, useCallback } from "react";
+import { useStorage } from "../hooks/useStorage";
+import { useTheme } from "../hooks/useTheme";
+
+// Create the context
+const AppContext = createContext(null);
+
+/**
+ * Provider for global application state.
+ * Wraps the entire app. Provides:
+ * - Current tool navigation
+ * - Dark mode
+ * - Sidebar state
+ * - Announcements
+ * - Global settings
+ */
+export function AppProvider({ children }) {
+  const globalStorage = useStorage("global");
+  const { darkMode, toggleDarkMode } = useTheme();
+
+  // Which tool is currently active ('home' for landing page)
+  const [currentTool, setCurrentTool] = useState("home");
+
+  // Sidebar open state (mainly for mobile drawer)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Announcements
+  const [announcements, setAnnouncements] = useState(() => {
+    return globalStorage.load("announcements", []);
+  });
+
+  // Global settings
+  const [settings, setSettings] = useState(() => {
+    return globalStorage.load("settings", {
+      language: "en",
+      autoSave: true,
+      showTips: true,
+    });
+  });
+
+  // Navigate to a tool
+  const navigateToTool = useCallback((toolId) => {
+    setCurrentTool(toolId);
+    setSidebarOpen(false);
+  }, []);
+
+  // Go home
+  const goHome = useCallback(() => {
+    setCurrentTool("home");
+    setSidebarOpen(false);
+  }, []);
+
+  // Toggle sidebar
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen((prev) => !prev);
+  }, []);
+
+  // Update a setting
+  const updateSetting = useCallback(
+    (key, value) => {
+      setSettings((prev) => {
+        const updated = { ...prev, [key]: value };
+        globalStorage.save("settings", updated);
+        return updated;
+      });
+    },
+    [globalStorage],
+  );
+
+  // Mark announcement as read
+  const readAnnouncement = useCallback(
+    (id) => {
+      setAnnouncements((prev) => {
+        const updated = prev.map((a) =>
+          a.id === id ? { ...a, read: true } : a,
+        );
+        globalStorage.save("announcements", updated);
+        return updated;
+      });
+    },
+    [globalStorage],
+  );
+
+  const value = {
+    currentTool,
+    navigateToTool,
+    goHome,
+    sidebarOpen,
+    toggleSidebar,
+    darkMode,
+    toggleDarkMode,
+    announcements,
+    readAnnouncement,
+    settings,
+    updateSetting,
+  };
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+
+/**
+ * Hook to access global app state.
+ * Must be used inside AppProvider.
+ */
+export function useApp() {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error("useApp must be used inside AppProvider");
+  }
+  return context;
+}
+
+================
+File: src/core/context/ToolContext.jsx
+================
+import React, { createContext, useContext } from "react";
+import { useToolActions } from "../hooks/useToolActions";
+
+// Create the context
+const ToolContext = createContext(null);
+
+/**
+ * Provider for the currently active tool's actions and state.
+ * Wraps the tool component. Provides:
+ * - Tool action registration
+ * - Toolbar configuration
+ * - Action execution
+ */
+export function ToolProvider({ children }) {
+  const toolActions = useToolActions();
+
+  return (
+    <ToolContext.Provider value={toolActions}>{children}</ToolContext.Provider>
+  );
+}
+
+/**
+ * Hook to access the current tool's actions.
+ * Must be used inside ToolProvider.
+ */
+export function useTool() {
+  const context = useContext(ToolContext);
+  if (!context) {
+    throw new Error("useTool must be used inside ToolProvider");
+  }
+  return context;
+}
+
+================
+File: src/core/hooks/useMediaQuery.js
+================
+import { useState, useEffect } from "react";
+
+/**
+ * Hook to detect if a CSS media query matches.
+ * Useful for responsive design without CSS-in-JS.
+ *
+ * Usage:
+ *   const isMobile = useMediaQuery("(max-width: 768px)");
+ *   const isDark = useMediaQuery("(prefers-color-scheme: dark)");
+ *
+ * @param {string} query - CSS media query string
+ * @returns {boolean} Whether the query currently matches
+ */
+export function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(query).matches;
+  });
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+
+    const handleChange = (e) => {
+      setMatches(e.matches);
+    };
+
+    // Modern browsers
+    media.addEventListener("change", handleChange);
+    // Initial check
+    setMatches(media.matches);
+
+    return () => {
+      media.removeEventListener("change", handleChange);
+    };
+  }, [query]);
+
+  return matches;
+}
+
+================
+File: src/core/hooks/useStorage.js
+================
+import { useCallback } from "react";
+import {
+  saveData,
+  loadData,
+  deleteData,
+  getKeys,
+  clearNamespace,
+} from "../utils/storage";
+
+/**
+ * Hook for reading and writing storage data.
+ * Automatically namespaces by tool ID or 'global'.
+ *
+ * Usage:
+ *   const storage = useStorage('svs');
+ *   storage.save('map-1', data);
+ *   const data = storage.load('map-1', defaultValue);
+ */
+export function useStorage(namespace) {
+  const save = useCallback(
+    (key, value) => saveData(namespace, key, value),
+    [namespace],
+  );
+
+  const load = useCallback(
+    (key, defaultValue) => loadData(namespace, key, defaultValue),
+    [namespace],
+  );
+
+  const remove = useCallback((key) => deleteData(namespace, key), [namespace]);
+
+  const list = useCallback(() => getKeys(namespace), [namespace]);
+
+  const clear = useCallback(() => clearNamespace(namespace), [namespace]);
+
+  return { save, load, remove, list, clear };
+}
+
+================
+File: src/core/hooks/useTheme.js
+================
+import { useState, useEffect, useCallback } from "react";
+import { useStorage } from "./useStorage";
+
+/**
+ * Hook for managing dark mode across the entire website.
+ * Saves preference to global storage.
+ */
+export function useTheme() {
+  const globalStorage = useStorage("global");
+
+  const [darkMode, setDarkMode] = useState(() => {
+    return globalStorage.load("darkdarkMode", false);
+  });
+
+  // Apply dark mode to document
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    globalStorage.save("darkMode", darkMode);
+  }, [darkMode, globalStorage]);
+
+  const toggleDarkMode = useCallback(() => {
+    setDarkMode((prev) => !prev);
+  }, []);
+
+  return { darkMode, toggleDarkMode };
+}
+
+================
+File: src/core/hooks/useToast.js
+================
+import { useState, useEffect, useCallback } from "react";
+
+/**
+ * Hook for showing toast notifications.
+ * Auto-dismisses after 2 seconds.
+ *
+ * Usage:
+ *   const { toast, showToast } = useToast();
+ *   showToast('Map saved!', 'success');
+ */
+export function useToast() {
+  const [toast, setToast] = useState(null);
+
+  const showToast = useCallback((message, type = "default") => {
+    setToast({ message, type });
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  return { toast, showToast };
+}
+
+================
+File: src/core/hooks/useToolActions.js
+================
+import { useState, useCallback, useRef } from "react";
+
+/**
+ * Hook for tools to register their actions with the TopBar.
+ *
+ * How it works:
+ * 1. Tool mounts and calls registerTool({ actions, state, toolbar })
+ * 2. TopBar reads toolbarConfig and renders buttons
+ * 3. User clicks button → TopBar calls the matching action
+ * 4. Tool updates state → TopBar updates button appearance (disabled, etc.)
+ *
+ * Usage inside a tool:
+ *   const { registerTool, updateState } = useToolActions();
+ *
+ *   useEffect(() => {
+ *     registerTool({
+ *       actions: { undo: handleUndo, export: handleExport },
+ *       state: { canUndo: history.length > 0 },
+ *       toolbar: [
+ *         { id: 'undo', icon: '↩', label: 'Undo', disabled: !history.length },
+ *         { id: 'export', icon: '📷', label: 'Export' },
+ *       ],
+ *     });
+ *   }, [history.length]);
+ */
+export function useToolActions() {
+  const [toolConfig, setToolConfig] = useState(null);
+  const actionsRef = useRef({});
+
+  const registerTool = useCallback((config) => {
+    actionsRef.current = config.actions || {};
+    setToolConfig({
+      toolbar: config.toolbar || [],
+      state: config.state || {},
+    });
+  }, []);
+
+  const updateState = useCallback((newState) => {
+    setToolConfig((prev) =>
+      prev ? { ...prev, state: { ...prev.state, ...newState } } : null,
+    );
+  }, []);
+
+  const executeAction = useCallback((actionId) => {
+    const action = actionsRef.current[actionId];
+    if (typeof action === "function") {
+      action();
+    }
+  }, []);
+
+  return {
+    toolConfig,
+    registerTool,
+    updateState,
+    executeAction,
+  };
+}
+
+================
+File: src/core/hooks/useViewport.js
+================
+import { useState, useRef, useCallback } from "react";
+
+/**
+ * Hook for managing canvas viewport - zoom, pan, drag.
+ * Supports both mouse and touch interactions.
+ *
+ * Usage:
+ *   const viewport = useViewport();
+ *   // Attach handlers to your canvas element
+ *   // Use viewport.zoom, viewport.offset for transforms
+ */
+export function useViewport() {
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+
+  const lastPos = useRef({ x: 0, y: 0 });
+  const lastTouchDist = useRef(null);
+
+  // Zoom with mouse wheel
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    const delta = -e.deltaY * 0.001;
+    setZoom((z) => Math.max(0.3, Math.min(3, z + delta)));
+  }, []);
+
+  // Start dragging with mouse
+  const handleMouseDown = useCallback((e) => {
+    setDragging(true);
+    lastPos.current = { x: e.clientX, y: e.clientY };
+  }, []);
+
+  // Drag with mouse
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (!dragging) return;
+
+      const dx = e.clientX - lastPos.current.x;
+      const dy = e.clientY - lastPos.current.y;
+
+      setOffset((prev) => ({
+        x: prev.x + dx,
+        y: prev.y + dy,
+      }));
+
+      lastPos.current = { x: e.clientX, y: e.clientY };
+    },
+    [dragging],
+  );
+
+  // Stop dragging
+  const handleMouseUp = useCallback(() => {
+    setDragging(false);
+  }, []);
+
+  // Calculate distance between two touch points
+  const getTouchDistance = useCallback((touches) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }, []);
+
+  // Start touch interaction
+  const handleTouchStart = useCallback(
+    (e) => {
+      if (e.touches.length === 1) {
+        setDragging(true);
+        lastPos.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        };
+      }
+
+      if (e.touches.length === 2) {
+        lastTouchDist.current = getTouchDistance(e.touches);
+      }
+    },
+    [getTouchDistance],
+  );
+
+  // Touch move - pan or pinch zoom
+  const handleTouchMove = useCallback(
+    (e) => {
+      if (e.touches.length === 1 && dragging) {
+        const dx = e.touches[0].clientX - lastPos.current.x;
+        const dy = e.touches[0].clientY - lastPos.current.y;
+
+        setOffset((prev) => ({
+          x: prev.x + dx,
+          y: prev.y + dy,
+        }));
+
+        lastPos.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        };
+      }
+
+      if (e.touches.length === 2) {
+        const newDist = getTouchDistance(e.touches);
+
+        if (lastTouchDist.current) {
+          const delta = (newDist - lastTouchDist.current) * 0.005;
+          setZoom((z) => Math.max(0.3, Math.min(3, z + delta)));
+        }
+
+        lastTouchDist.current = newDist;
+      }
+    },
+    [dragging, getTouchDistance],
+  );
+
+  // End touch
+  const handleTouchEnd = useCallback(() => {
+    setDragging(false);
+    lastTouchDist.current = null;
+  }, []);
+
+  return {
+    zoom,
+    setZoom,
+    offset,
+    setOffset,
+    dragging,
+    handleWheel,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
+  };
+}
+
+================
+File: src/core/layout/BottomPanel.jsx
+================
+import React from "react";
+
+/**
+ * Thin status bar at the bottom of the screen.
+ * Shows version info and subtle status messages.
+ */
+export default function BottomPanel() {
+  return (
+    <footer className="h-8 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 text-xs text-gray-400 dark:text-gray-500 shrink-0">
+      <span>LastZ Planner v1.0</span>
+      <span>Ready</span>
+    </footer>
+  );
+}
+
+================
+File: src/core/layout/Layout.jsx
+================
+import React from "react";
+import { useApp } from "../context/AppContext";
+import TopBar from "./TopBar";
+import SideBar from "./SideBar";
+import BottomPanel from "./BottomPanel";
+
+/**
+ * The main application shell.
+ *
+ * Landing page: Full screen, no sidebar, no bottom panel.
+ * Tool page: Sidebar + content area + bottom panel.
+ *
+ * Props:
+ *   - children: The current page/tool component
+ *   - toolConfig: Toolbar configuration from the active tool
+ */
+export default function Layout({ children, toolConfig }) {
+  const { currentTool } = useApp();
+  const isHome = currentTool === "home";
+
+  return (
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-950 overflow-hidden">
+      {/* TopBar - always visible */}
+      <TopBar toolConfig={toolConfig} />
+
+      {/* Main area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar - hidden on landing page */}
+        {!isHome && <SideBar />}
+
+        {/* Content area */}
+        <main className="flex-1 relative overflow-hidden">{children}</main>
+      </div>
+
+      {/* Bottom panel - hidden on landing page */}
+      {!isHome && <BottomPanel />}
+    </div>
+  );
+}
+
+================
+File: src/core/layout/SideBar.jsx
+================
+import React from "react";
+import { useApp } from "../context/AppContext";
+import { toolRegistry } from "../../tools";
+
+/**
+ * Sidebar navigation for switching between tools.
+ *
+ * PC: Fixed vertical strip on the left with icons and tool names.
+ * Mobile: Slide-out drawer from the left with full overlay.
+ */
+export default function SideBar() {
+  const { currentTool, navigateToTool, sidebarOpen, toggleSidebar } = useApp();
+
+  const tools = toolRegistry.getAll();
+
+  return (
+    <>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-30 md:hidden"
+          onClick={toggleSidebar}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col z-40 transition-all duration-300 ease-out
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          fixed inset-y-0 left-0 w-64 md:translate-x-0 md:static md:w-16 lg:w-64
+        `}
+      >
+        {/* Tool list */}
+        <nav className="flex-1 py-4 px-2 space-y-1">
+          {tools.map((tool) => {
+            const isActive = currentTool === tool.id;
+
+            return (
+              <button
+                key={tool.id}
+                onClick={() => navigateToTool(tool.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-left
+                  ${
+                    isActive
+                      ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                      : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }
+                `}
+              >
+                {/* Icon with accent dot */}
+                <span className="relative text-xl">
+                  {tool.icon}
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900"
+                    style={{ backgroundColor: tool.accent }}
+                  />
+                </span>
+
+                {/* Name - hidden on md, shown on lg */}
+                <span className="font-medium text-sm md:hidden lg:block">
+                  {tool.name}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Bottom: Home button */}
+        <div className="p-2 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => navigateToTool("home")}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-left
+              ${
+                currentTool === "home"
+                  ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }
+            `}
+          >
+            <span className="text-xl">🏠</span>
+            <span className="font-medium text-sm md:hidden lg:block">Home</span>
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+================
+File: src/core/layout/TopBar.jsx
+================
+import React from "react";
+import { useApp } from "../context/AppContext";
+
+/**
+ * Top navigation bar.
+ *
+ * Left side: Hamburger menu (mobile), website title (click to go home)
+ * Middle: Tool name + tool-specific action buttons (from ToolContext)
+ * Right side: Announcements bell, dark mode toggle, settings
+ *
+ * On mobile: Tool buttons collapse into overflow menu.
+ */
+export default function TopBar({ toolConfig }) {
+  const {
+    currentTool,
+    goHome,
+    sidebarOpen,
+    toggleSidebar,
+    darkMode,
+    toggleDarkMode,
+  } = useApp();
+
+  const isHome = currentTool === "home";
+  const toolName = toolConfig?.name || "LastZ Planner";
+
+  return (
+    <header className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 shrink-0">
+      {/* Left: Menu + Title */}
+      <div className="flex items-center gap-3">
+        {/* Hamburger - only show when not on home page */}
+        {!isHome && (
+          <button
+            onClick={toggleSidebar}
+            className="w-9 h-9 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center justify-center text-lg"
+            title="Toggle sidebar"
+          >
+            {sidebarOpen ? "✕" : "☰"}
+          </button>
+        )}
+
+        {/* Title - clickable to go home */}
+        <button
+          onClick={goHome}
+          className="flex flex-col items-start hover:opacity-80 transition"
+        >
+          <span className="font-semibold text-gray-900 dark:text-gray-100">
+            LastZ Planner
+          </span>
+          {!isHome && (
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {toolName}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Middle: Tool-specific buttons */}
+      {!isHome && toolConfig?.toolbar && (
+        <div className="hidden md:flex items-center gap-1">
+          {toolConfig.toolbar.map((button) => (
+            <button
+              key={button.id}
+              onClick={() => toolConfig.onAction?.(button.id)}
+              disabled={button.disabled}
+              title={button.label}
+              className={`px-3 h-9 rounded-xl transition text-sm font-medium ${
+                button.danger
+                  ? "bg-red-50 dark:bg-red-900/30 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              } disabled:opacity-30`}
+            >
+              <span className="mr-1">{button.icon}</span>
+              <span className="hidden lg:inline">{button.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Right: Global actions */}
+      <div className="flex items-center gap-1">
+        {/* Announcements bell */}
+        <button
+          className="w-9 h-9 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center justify-center relative"
+          title="Announcements"
+        >
+          🔔
+          {/* Red dot for unread - placeholder */}
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+        </button>
+
+        {/* Dark mode toggle */}
+        <button
+          onClick={toggleDarkMode}
+          className="w-9 h-9 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center justify-center"
+          title={darkMode ? "Light mode" : "Dark mode"}
+        >
+          {darkMode ? "☀️" : "🌙"}
+        </button>
+
+        {/* Settings */}
+        <button
+          className="w-9 h-9 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center justify-center"
+          title="Settings"
+        >
+          ⚙️
+        </button>
+      </div>
+    </header>
+  );
+}
+
+================
+File: src/core/utils/animation.js
+================
+// Shared animation utilities
+
+/**
+ * Gets CSS transition string for panel animations.
+ * @param {string} property - CSS property to animate
+ * @param {number} duration - Duration in ms
+ * @returns {string} CSS transition value
+ */
+export function getTransition(property = "all", duration = 300) {
+  return `${property} ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+}
+
+/**
+ * CSS class for fade in animation.
+ */
+export const fadeInClass = "animate-fade-in";
+
+/**
+ * CSS class for slide up animation.
+ */
+export const slideUpClass = "animate-slide-up";
+
+/**
+ * CSS class for slide in from right.
+ */
+export const slideRightClass = "animate-slide-right";
+
+================
+File: src/core/utils/constants.js
+================
+// Global constants for the LastZ Planner website
+
+// Tool list - each tool registers here
+export const TOOLS = [];
+
+// Animation presets
+export const ANIMATION = {
+  panelSlide: {
+    duration: 300,
+    easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+  },
+  fadeIn: {
+    duration: 200,
+    easing: "ease-out",
+  },
+  toast: {
+    duration: 300,
+    delay: 2000,
+  },
+};
+
+// Loading screen tips
+export const LOADING_TIPS = [
+  "Did you know? Press Ctrl+Z to undo!",
+  "Tip: Use number keys 1-7 to quickly select colors.",
+  "Tip: Pinch to zoom on mobile devices.",
+  "Tip: Long press on mobile to access more options.",
+  "Did you know? Your data is saved automatically.",
+  "Tip: Drag with two fingers to pan the map.",
+  "Tip: Click the website title to return home.",
+];
+
+// Breakpoints
+export const BREAKPOINTS = {
+  mobile: 768,
+  tablet: 1024,
+};
+
+// Storage prefixes
+export const STORAGE_PREFIX = "lastz";
+
+================
+File: src/core/utils/storage.js
+================
+// Unified storage utility - handles both per-tool and global storage
+
+const PREFIX = "lastz";
+
+/**
+ * Gets the full storage key with namespace.
+ * @param {string} namespace - 'global' or tool ID
+ * @param {string} key - The specific key
+ * @returns {string} Full storage key
+ */
+function getKey(namespace, key) {
+  return `${PREFIX}:${namespace}:${key}`;
+}
+
+/**
+ * Saves data to localStorage.
+ * @param {string} namespace - 'global' or tool ID
+ * @param {string} key - The specific key
+ * @param {any} value - Data to save
+ */
+export function saveData(namespace, key, value) {
+  try {
+    const fullKey = getKey(namespace, key);
+    localStorage.setItem(fullKey, JSON.stringify(value));
+  } catch (err) {
+    console.error(`Failed to save ${key}:`, err);
+  }
+}
+
+/**
+ * Loads data from localStorage.
+ * @param {string} namespace - 'global' or tool ID
+ * @param {string} key - The specific key
+ * @param {any} defaultValue - Value to return if not found
+ * @returns {any} The stored data or defaultValue
+ */
+export function loadData(namespace, key, defaultValue = null) {
+  try {
+    const fullKey = getKey(namespace, key);
+    const saved = localStorage.getItem(fullKey);
+    return saved ? JSON.parse(saved) : defaultValue;
+  } catch (err) {
+    console.error(`Failed to load ${key}:`, err);
+    return defaultValue;
+  }
+}
+
+/**
+ * Deletes data from localStorage.
+ * @param {string} namespace - 'global' or tool ID
+ * @param {string} key - The specific key
+ */
+export function deleteData(namespace, key) {
+  try {
+    const fullKey = getKey(namespace, key);
+    localStorage.removeItem(fullKey);
+  } catch (err) {
+    console.error(`Failed to delete ${key}:`, err);
+  }
+}
+
+/**
+ * Gets all keys for a namespace.
+ * @param {string} namespace - 'global' or tool ID
+ * @returns {string[]} List of keys (without prefix)
+ */
+export function getKeys(namespace) {
+  try {
+    const prefix = getKey(namespace, "");
+    return Object.keys(localStorage)
+      .filter((key) => key.startsWith(prefix))
+      .map((key) => key.replace(prefix, ""));
+  } catch (err) {
+    console.error(`Failed to get keys for ${namespace}:`, err);
+    return [];
+  }
+}
+
+/**
+ * Clears all data for a namespace.
+ * @param {string} namespace - 'global' or tool ID
+ */
+export function clearNamespace(namespace) {
+  try {
+    const prefix = getKey(namespace, "");
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith(prefix))
+      .forEach((key) => localStorage.removeItem(key));
+  } catch (err) {
+    console.error(`Failed to clear ${namespace}:`, err);
+  }
+}
+
+================
+File: src/pages/LandingPage.jsx
+================
+import React from "react";
+import { useApp } from "../core/context/AppContext";
+import { toolRegistry } from "../tools";
+
+/**
+ * Landing page - the home screen of the website.
+ *
+ * Full-screen experience showing:
+ * - Big header with title and tagline
+ * - Grid of tool cards (like e-commerce products)
+ * - Each card: icon, name, description, accent color, "Open" button
+ * - Footer with version info
+ */
+export default function LandingPage() {
+  const { navigateToTool } = useApp();
+  const tools = toolRegistry.getAll();
+
+  return (
+    <div className="min-h-full bg-gray-50 dark:bg-gray-950">
+      {/* Hero section */}
+      <div className="text-center pt-16 pb-12 px-4">
+        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+          LastZ Planner
+        </h1>
+        <p className="text-lg text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
+          Strategy & Tools for LastZ
+        </p>
+      </div>
+
+      {/* Tool cards grid */}
+      <div className="max-w-5xl mx-auto px-4 pb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {tools.map((tool, index) => (
+            <div
+              key={tool.id}
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              {/* Icon with accent */}
+              <div className="flex items-center gap-3 mb-4">
+                <span
+                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                  style={{ backgroundColor: `${tool.accent}20` }}
+                >
+                  {tool.icon}
+                </span>
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: tool.accent }}
+                />
+              </div>
+
+              {/* Name & description */}
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                {tool.name}
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                {tool.description}
+              </p>
+
+              {/* Open button */}
+              <button
+                onClick={() => navigateToTool(tool.id)}
+                className="w-full bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-semibold transition"
+              >
+                Open Tool
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center py-8 text-sm text-gray-400 dark:text-gray-500">
+        LastZ Planner v1.0
+      </div>
+    </div>
+  );
+}
+
+================
+File: src/tools/svs/components/BrushDropdown.jsx
+================
+
+
+================
+File: src/tools/svs/components/BrushPanel.jsx
+================
+// tools/svs/components/BrushPanel.jsx
+import React from "react";
+import FloatingPanel from "./FloatingPanel";
+
+/**
+ * Redesigned BrushPanel — Linear/Figma HUD style.
+ *
+ * Changes:
+ * - Dark frosted glass via FloatingPanel
+ * - Size buttons rendered as visual hex-dot previews, not number buttons
+ * - Slider replaced with a segmented pill selector for cleaner interaction
+ * - Active state uses a soft indigo fill, not a ring
+ */
+export default function BrushPanel({ brushSize, setBrushSize }) {
+  const sizes = [1, 2, 3, 4, 5];
+
+  return (
+    <FloatingPanel
+      label="Brush"
+      width="w-44"
+      position="left"
+      defaultOpen={true}
+      top="top-4"
+    >
+      {/* Segmented size selector */}
+      <div
+        className="flex items-center justify-between"
+        style={{
+          background: "rgba(255,255,255,0.05)",
+          border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: "7px",
+          padding: "3px",
+          gap: "2px",
+        }}
+      >
+        {sizes.map((v) => (
+          <SizeButton
+            key={v}
+            size={v}
+            isActive={brushSize === v}
+            onClick={() => setBrushSize(v)}
+          />
+        ))}
+      </div>
+
+      {/* Visual preview of brush size */}
+      <div
+        className="flex items-center justify-center mt-3"
+        style={{ height: "36px" }}
+      >
+        <BrushPreview size={brushSize} />
+      </div>
+
+      {/* Label */}
+      <div
+        className="text-center mt-1"
+        style={{
+          fontSize: "10px",
+          color: "rgba(255,255,255,0.25)",
+          letterSpacing: "0.05em",
+        }}
+      >
+        {brushSize === 1 ? "Single hex" : `${brushSize}-hex radius`}
+      </div>
+    </FloatingPanel>
+  );
+}
+
+/** Segmented pill button for a size value */
+function SizeButton({ size, isActive, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flex: 1,
+        height: "26px",
+        borderRadius: "5px",
+        fontSize: "11px",
+        fontWeight: 600,
+        background: isActive ? "rgba(99, 102, 241, 0.3)" : "transparent",
+        border: isActive
+          ? "1px solid rgba(99, 102, 241, 0.5)"
+          : "1px solid transparent",
+        color: isActive ? "rgb(165, 180, 252)" : "rgba(255,255,255,0.35)",
+        transition: "all 0.15s ease",
+        cursor: "pointer",
+      }}
+    >
+      {size}
+    </button>
+  );
+}
+
+/**
+ * Visual dot preview showing brush coverage.
+ * Renders a small hex-dot cluster to represent the selected radius.
+ */
+function BrushPreview({ size }) {
+  // Dot grid: render a diamond of dots up to `size` radius
+  const dots = [];
+  const r = size - 1;
+  const dotSize = Math.max(3, 6 - r);
+  const gap = dotSize + 2;
+
+  for (let dq = -r; dq <= r; dq++) {
+    for (let dr = -r; dr <= r; dr++) {
+      const ds = -dq - dr;
+      if (Math.abs(ds) > r) continue;
+      // Offset layout: axial to pixel (flat-top)
+      const x = gap * (dq + dr / 2);
+      const y = gap * 0.866 * dr;
+      dots.push({ x, y, key: `${dq},${dr}`, isCenter: dq === 0 && dr === 0 });
+    }
+  }
+
+  // Center the preview
+  const xs = dots.map((d) => d.x);
+  const ys = dots.map((d) => d.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+
+  return (
+    <svg width="80" height="36" viewBox="-40 -18 80 36">
+      {dots.map((d) => (
+        <circle
+          key={d.key}
+          cx={d.x - cx}
+          cy={d.y - cy}
+          r={dotSize / 2}
+          fill={d.isCenter ? "rgb(129, 140, 248)" : "rgba(99, 102, 241, 0.45)"}
+        />
+      ))}
+    </svg>
+  );
+}
+
+================
+File: src/tools/svs/components/FloatingPanel.jsx
+================
+import React, { useState } from "react";
+
+/**
+ * Redesigned FloatingPanel — Linear/Figma-style HUD panel.
+ *
+ * Changes from original:
+ * - Frosted glass surface with backdrop-blur
+ * - Razor-thin border, elevated shadow
+ * - Proper floating position (not edge-attached)
+ * - Clean chevron toggle tab instead of emoji
+ */
+export default function FloatingPanel({
+  children,
+  label,
+  width = "w-56",
+  position = "left",
+  defaultOpen = true,
+  top = "top-4",
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const isLeft = position === "left";
+
+  return (
+    <div
+      className={`absolute ${top} ${isLeft ? "left-3" : "right-3"} z-10 flex items-start gap-0`}
+    >
+      {/* Panel body */}
+      <div
+        className={`
+          ${width} text-sm overflow-hidden
+          transition-all duration-200 ease-out
+          ${
+            open
+              ? "opacity-100 translate-x-0 pointer-events-auto"
+              : isLeft
+                ? "opacity-0 -translate-x-2 pointer-events-none"
+                : "opacity-0 translate-x-2 pointer-events-none"
+          }
+        `}
+        style={{
+          background: "rgba(15, 17, 21, 0.82)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "10px",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.2)",
+        }}
+      >
+        {/* Panel header */}
+        {label && (
+          <div
+            className="px-3 pt-3 pb-2 flex items-center justify-between"
+            style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+          >
+            <span
+              className="text-gray-400 font-medium tracking-widest"
+              style={{ fontSize: "10px", letterSpacing: "0.1em" }}
+            >
+              {label.toUpperCase()}
+            </span>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="px-3 py-3">{children}</div>
+      </div>
+
+      {/* Toggle tab */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`
+          flex-shrink-0 flex items-center justify-center
+          transition-all duration-200 hover:opacity-100
+          ${isLeft ? "ml-1" : "mr-1 order-first"}
+          ${open ? "opacity-40" : "opacity-80"}
+        `}
+        style={{
+          width: "20px",
+          height: "28px",
+          marginTop: "8px",
+          background: "rgba(15, 17, 21, 0.7)",
+          backdropFilter: "blur(8px)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: "5px",
+          color: "rgba(255,255,255,0.6)",
+          fontSize: "10px",
+        }}
+        title={open ? "Collapse" : "Expand"}
+      >
+        {isLeft ? (open ? "‹" : "›") : open ? "›" : "‹"}
+      </button>
+    </div>
+  );
+}
+
+================
+File: src/tools/svs/components/HexCanvas.jsx
+================
+import React from "react";
+import { hexPoints, axialToPixel } from "../utils/hexMath";
+import { GRID_RANGE } from "../constants";
+
+export default function HexCanvas({
+  size,
+  colors,
+  labels,
+  onHexClick,
+  onHexHover,
+}) {
+  const cells = [];
+
+  for (let q = -GRID_RANGE; q <= GRID_RANGE; q++) {
+    for (let r = -GRID_RANGE; r <= GRID_RANGE; r++) {
+      const s = -q - r;
+      if (Math.abs(s) > GRID_RANGE) continue;
+
+      const { x, y } = axialToPixel(q, r, size);
+      const key = `${q},${r}`;
+
+      cells.push(
+        <g key={key}>
+          <polygon
+            points={hexPoints(x, y, size)}
+            fill={colors[key] || "#e5e7eb"}
+            stroke="#374151"
+            strokeWidth="1"
+            onClick={() => onHexClick?.(key)}
+            onContextMenu={(e) => e.preventDefault()}
+            onMouseEnter={() => onHexHover?.(q, r)}
+            onMouseLeave={() => onHexHover?.(null)}
+            style={{ cursor: "pointer" }}
+          />
+          {labels[key] && (
+            <text
+              x={x}
+              y={y + 4}
+              textAnchor="middle"
+              fontSize={size * 0.4}
+              fontFamily="Arial"
+              fontWeight="bold"
+              fill="#1f2937"
+              pointerEvents="none"
+            >
+              {labels[key]}
+            </text>
+          )}
+        </g>,
+      );
+    }
+  }
+
+  return <>{cells}</>;
+}
+
+================
+File: src/tools/svs/components/LegendCornerPanel.jsx
+================
+
+
+================
+File: src/tools/svs/components/LegendPanel.jsx
+================
+// tools/svs/components/LegendPanel.jsx
+import React from "react";
+import { PALETTE, ERASER, LABEL_TOOL } from "../constants";
+import FloatingPanel from "./FloatingPanel";
+
+/**
+ * Redesigned LegendPanel — Linear/Figma HUD style.
+ *
+ * Changes:
+ * - Dark frosted glass surface (via FloatingPanel)
+ * - Color swatches in a tighter grid with checkmark active state
+ * - Eraser/Label as icon-only pill buttons
+ * - Legend rows use a 2px left color bar instead of a dot square
+ * - Hex counts in a monospaced badge on the right
+ * - Section dividers use subtle opacity lines
+ */
+export default function LegendPanel({
+  selectedTool,
+  setSelectedTool,
+  legend,
+  counts,
+  editingLegend,
+  editingLegendText,
+  setEditingLegend,
+  setEditingLegendText,
+  onLegendSave,
+}) {
+  return (
+    <FloatingPanel
+      label="Tools & Legend"
+      width="w-64"
+      position="right"
+      defaultOpen={true}
+      top="top-4"
+    >
+      {/* Color palette grid */}
+      <div className="grid grid-cols-7 gap-1.5 mb-3">
+        {PALETTE.map((color) => (
+          <ColorSwatch
+            key={color}
+            color={color}
+            isActive={selectedTool === color}
+            onClick={() => setSelectedTool(color)}
+          />
+        ))}
+      </div>
+
+      {/* Eraser + Label tools */}
+      <div className="flex gap-1.5 mb-3">
+        <SpecialTool
+          label="Eraser"
+          icon={
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path
+                d="M2 10L5 7M10 2L5 7M5 7L7 10H10M5 7L2 4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          }
+          isActive={selectedTool === ERASER}
+          onClick={() => setSelectedTool(ERASER)}
+        />
+        <SpecialTool
+          label="Label"
+          icon={
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path
+                d="M2 9.5V8L7.5 2.5L9.5 4.5L4 10H2.5L2 9.5Z"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M6.5 3.5L8.5 5.5"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
+            </svg>
+          }
+          isActive={selectedTool === LABEL_TOOL}
+          onClick={() => setSelectedTool(LABEL_TOOL)}
+        />
+      </div>
+
+      {/* Divider */}
+      <div
+        style={{
+          height: "1px",
+          background: "rgba(255,255,255,0.06)",
+          marginBottom: "10px",
+        }}
+      />
+
+      {/* Legend rows */}
+      <div className="space-y-1">
+        {PALETTE.map((color) => (
+          <LegendRow
+            key={color}
+            color={color}
+            name={legend[color]}
+            count={counts[color] || 0}
+            isActive={selectedTool === color}
+            isEditing={editingLegend === color}
+            editingText={editingLegendText}
+            onStartEdit={() => {
+              setEditingLegend(color);
+              setEditingLegendText(legend[color] || "");
+            }}
+            onTextChange={setEditingLegendText}
+            onSave={() => onLegendSave(color, editingLegendText)}
+          />
+        ))}
+      </div>
+    </FloatingPanel>
+  );
+}
+
+/** Color swatch with checkmark active state */
+function ColorSwatch({ color, isActive, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{ background: color }}
+      className="relative flex items-center justify-center rounded-md transition-all duration-150"
+      title={color}
+      style={{
+        background: color,
+        width: "28px",
+        height: "28px",
+        borderRadius: "6px",
+        border: isActive
+          ? "2px solid rgba(255,255,255,0.9)"
+          : "2px solid transparent",
+        transform: isActive ? "scale(1.08)" : "scale(1)",
+        boxShadow: isActive
+          ? `0 0 0 2px ${color}55, 0 2px 8px ${color}44`
+          : "none",
+        transition: "all 0.15s ease",
+        flexShrink: 0,
+      }}
+    >
+      {isActive && (
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <path
+            d="M2 5L4 7L8 3"
+            stroke="rgba(0,0,0,0.7)"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+/** Eraser / Label tool button */
+function SpecialTool({ label, icon, isActive, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex-1 flex items-center justify-center gap-1.5 rounded-md transition-all duration-150"
+      title={label}
+      style={{
+        height: "28px",
+        fontSize: "11px",
+        fontWeight: 500,
+        background: isActive
+          ? "rgba(99, 102, 241, 0.25)"
+          : "rgba(255,255,255,0.06)",
+        border: isActive
+          ? "1px solid rgba(99, 102, 241, 0.5)"
+          : "1px solid rgba(255,255,255,0.08)",
+        color: isActive ? "rgb(165, 180, 252)" : "rgba(255,255,255,0.45)",
+        transition: "all 0.15s ease",
+      }}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+/** Legend row with left color bar and inline editing */
+function LegendRow({
+  color,
+  name,
+  count,
+  isActive,
+  isEditing,
+  editingText,
+  onStartEdit,
+  onTextChange,
+  onSave,
+}) {
+  return (
+    <div
+      className="flex items-center gap-2 rounded-md transition-all duration-100"
+      style={{
+        padding: "5px 6px 5px 0",
+        background: isActive ? "rgba(255,255,255,0.05)" : "transparent",
+        borderRadius: "5px",
+      }}
+    >
+      {/* Left color bar */}
+      <div
+        style={{
+          width: "3px",
+          height: "18px",
+          borderRadius: "2px",
+          background: color,
+          flexShrink: 0,
+          marginLeft: "2px",
+          opacity: count > 0 ? 1 : 0.35,
+        }}
+      />
+
+      {/* Name — editable inline */}
+      {isEditing ? (
+        <input
+          autoFocus
+          value={editingText}
+          onChange={(e) => onTextChange(e.target.value)}
+          onBlur={onSave}
+          onKeyDown={(e) => e.key === "Enter" && onSave()}
+          className="flex-1 outline-none rounded px-1"
+          style={{
+            fontSize: "11px",
+            background: "rgba(255,255,255,0.08)",
+            border: "1px solid rgba(99,102,241,0.5)",
+            color: "rgba(255,255,255,0.9)",
+            padding: "2px 6px",
+            borderRadius: "4px",
+          }}
+        />
+      ) : (
+        <span
+          onClick={onStartEdit}
+          className="flex-1 truncate cursor-text"
+          style={{
+            fontSize: "11px",
+            color:
+              count > 0 ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.3)",
+            fontWeight: count > 0 ? 500 : 400,
+          }}
+          title="Click to rename"
+        >
+          {name || (
+            <span style={{ fontStyle: "italic", opacity: 0.4 }}>Unnamed</span>
+          )}
+        </span>
+      )}
+
+      {/* Hex count badge */}
+      <span
+        style={{
+          fontSize: "10px",
+          fontFamily: "ui-monospace, monospace",
+          color:
+            count > 0 ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.12)",
+          minWidth: "20px",
+          textAlign: "right",
+          flexShrink: 0,
+        }}
+      >
+        {count > 0 ? count : "–"}
+      </span>
+    </div>
+  );
+}
+
+================
+File: src/tools/svs/components/MapsPanel.jsx
+================
+// tools/svs/components/MapsPanel.jsx
+import React, { useState, useEffect } from "react";
+import { useStorage } from "../../../core/hooks/useStorage";
+import FloatingPanel from "./FloatingPanel";
+
+/**
+ * Redesigned MapsPanel — Linear/Figma HUD style.
+ *
+ * Changes:
+ * - Dark frosted glass via FloatingPanel
+ * - Save button is a compact ghost button, not a full-width indigo blob
+ * - Map rows use hover highlight with icon-only Load/Delete actions
+ * - Empty state is a proper invitation, not a gray sentence
+ * - Scrollable list capped at 5 visible rows
+ */
+export default function MapsPanel({ onSave, onLoad, onDelete, refreshKey }) {
+  const [maps, setMaps] = useState([]);
+  const svsStorage = useStorage("svs");
+
+  useEffect(() => {
+    const keys = svsStorage.list();
+    const mapKeys = keys.filter((k) => k.startsWith("map-"));
+    setMaps(mapKeys.map((k) => k.replace("map-", "")));
+  }, [refreshKey]);
+
+  return (
+    <FloatingPanel
+      label="Saved Maps"
+      width="w-52"
+      position="left"
+      defaultOpen={true}
+      top="top-4"
+    >
+      {/* Save button */}
+      <button
+        onClick={onSave}
+        className="w-full flex items-center justify-center gap-1.5 mb-3 transition-all duration-150"
+        style={{
+          height: "30px",
+          borderRadius: "6px",
+          fontSize: "11px",
+          fontWeight: 600,
+          background: "rgba(99, 102, 241, 0.18)",
+          border: "1px solid rgba(99, 102, 241, 0.35)",
+          color: "rgb(165, 180, 252)",
+          letterSpacing: "0.01em",
+          cursor: "pointer",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "rgba(99, 102, 241, 0.28)";
+          e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.55)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "rgba(99, 102, 241, 0.18)";
+          e.currentTarget.style.borderColor = "rgba(99, 102, 241, 0.35)";
+        }}
+      >
+        <SaveIcon />
+        Save current map
+      </button>
+
+      {/* Divider */}
+      <div
+        style={{
+          height: "1px",
+          background: "rgba(255,255,255,0.06)",
+          marginBottom: "8px",
+        }}
+      />
+
+      {/* Map list or empty state */}
+      {maps.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <div
+          className="space-y-1 overflow-y-auto"
+          style={{ maxHeight: "160px" }}
+        >
+          {maps.map((name) => (
+            <MapRow
+              key={name}
+              name={name}
+              onLoad={onLoad}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      )}
+    </FloatingPanel>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div
+      className="flex flex-col items-center justify-center text-center"
+      style={{ padding: "12px 0", gap: "6px" }}
+    >
+      <div style={{ fontSize: "18px", opacity: 0.3 }}>
+        <FolderIcon />
+      </div>
+      <span
+        style={{
+          fontSize: "11px",
+          color: "rgba(255,255,255,0.25)",
+          lineHeight: 1.4,
+        }}
+      >
+        No maps saved yet.{"\n"}Save your current layout to start.
+      </span>
+    </div>
+  );
+}
+
+function MapRow({ name, onLoad, onDelete }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      className="flex items-center gap-2 rounded-md"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: "5px 6px",
+        background: hovered ? "rgba(255,255,255,0.07)" : "transparent",
+        borderRadius: "5px",
+        transition: "background 0.1s ease",
+      }}
+    >
+      <span
+        className="flex-1 truncate"
+        style={{
+          fontSize: "11px",
+          color: "rgba(255,255,255,0.65)",
+          fontWeight: 500,
+        }}
+        title={name}
+      >
+        {name}
+      </span>
+
+      {/* Actions — always visible but low-opacity when not hovered */}
+      <div
+        className="flex gap-1 flex-shrink-0 transition-opacity duration-100"
+        style={{ opacity: hovered ? 1 : 0.3 }}
+      >
+        <IconButton
+          onClick={() => onLoad(name)}
+          title="Load map"
+          color="rgba(99, 102, 241, 0.8)"
+          hoverColor="rgba(99, 102, 241, 1)"
+        >
+          <LoadIcon />
+        </IconButton>
+        <IconButton
+          onClick={() => onDelete(name)}
+          title="Delete map"
+          color="rgba(239, 68, 68, 0.7)"
+          hoverColor="rgba(239, 68, 68, 1)"
+        >
+          <DeleteIcon />
+        </IconButton>
+      </div>
+    </div>
+  );
+}
+
+function IconButton({ onClick, title, color, hoverColor, children }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: "22px",
+        height: "22px",
+        borderRadius: "4px",
+        background: hovered ? "rgba(255,255,255,0.08)" : "transparent",
+        border: "none",
+        color: hovered ? hoverColor : color,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        transition: "all 0.12s ease",
+        flexShrink: 0,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ── SVG Icons ──────────────────────────────────────────────
+
+function SaveIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <path
+        d="M2 10h8V4.5L7.5 2H2v8z"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4 2v2.5h4V2"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect
+        x="3.5"
+        y="6.5"
+        width="5"
+        height="3.5"
+        rx="0.5"
+        stroke="currentColor"
+        strokeWidth="1.2"
+      />
+    </svg>
+  );
+}
+
+function LoadIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+      <path
+        d="M5.5 2v6M2.5 5.5l3 3 3-3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M2 9h7"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function DeleteIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+      <path
+        d="M2 3h7M4.5 3V2h2v1M8.5 3l-.5 6h-5L2.5 3"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function FolderIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M3 7h5l2 2h8a2 2 0 012 2v7a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+================
+File: src/tools/svs/components/PaintDropdown.jsx
+================
+
+
+================
+File: src/tools/svs/hooks/useHexState.js
+================
+// tools/svs/hooks/useHexState.js
+import { useState, useEffect, useMemo } from "react";
+import { PROTECTED, DEFAULT_LEGEND, PALETTE } from "../constants";
+import { getBrushCells } from "../utils/hexMath";
+import { ERASER, LABEL_TOOL } from "../constants";
+
+/**
+ * Manages the complete state of the SvS hex grid.
+ *
+ * Features:
+ * - Color painting with brush sizes
+ * - Label editing
+ * - Undo history (last 50 actions)
+ * - Legend customization
+ * - Protected zones (cannot be painted over)
+ * - Auto-save to localStorage
+ */
+export function useHexState() {
+  // === Core State ===
+
+  /** Map of "q,r" → color hex code */
+  const [colors, setColors] = useState(() =>
+    loadFromStorage("hex-grid-colors", { ...PROTECTED }),
+  );
+
+  /** Map of "q,r" → label text */
+  const [labels, setLabels] = useState(() =>
+    loadFromStorage("hex-grid-labels", {}),
+  );
+
+  /** Map of color → legend name */
+  const [legend, setLegend] = useState(() =>
+    loadFromStorage("hex-grid-legend", { ...DEFAULT_LEGEND }),
+  );
+
+  // === UI State ===
+
+  /** Stack of color snapshots for undo (max 50) */
+  const [history, setHistory] = useState([]);
+
+  /** Currently selected tool: a color, ERASER, or LABEL_TOOL */
+  const [selectedTool, setSelectedTool] = useState(PALETTE[0]);
+
+  /** Brush radius: 1-5 */
+  const [brushSize, setBrushSize] = useState(1);
+
+  /** Label being edited: "q,r" or null */
+  const [labelInput, setLabelInput] = useState(null);
+  const [labelText, setLabelText] = useState("");
+
+  /** Legend color being edited */
+  const [editingLegend, setEditingLegend] = useState(null);
+  const [editingLegendText, setEditingLegendText] = useState("");
+
+  // === Persistence ===
+
+  useEffect(() => saveToStorage("hex-grid-colors", colors), [colors]);
+  useEffect(() => saveToStorage("hex-grid-labels", labels), [labels]);
+  useEffect(() => saveToStorage("hex-grid-legend", legend), [legend]);
+
+  // === Helpers ===
+
+  /** Check if a hex is protected (part of the initial map) */
+  const isProtected = (key) => key in PROTECTED;
+
+  /**
+   * Apply the current tool to a hex and its neighbors.
+   * For paint/eraser: paints all hexes in brush radius.
+   * For label: opens the label editor.
+   */
+  const applyTool = (q, r) => {
+    // Label tool: open editor
+    if (selectedTool === LABEL_TOOL) {
+      const key = `${q},${r}`;
+      setLabelInput(key);
+      setLabelText(labels[key] || "");
+      return;
+    }
+
+    // Get all cells in brush radius
+    const cells = getBrushCells(q, r, brushSize - 1);
+    const freeCells = cells.filter(([cq, cr]) => !isProtected(`${cq},${cr}`));
+    if (freeCells.length === 0) return;
+
+    // Save snapshot for undo, then apply color
+    setColors((prev) => {
+      // Snapshot: remember previous colors of affected cells
+      const snapshot = {};
+      freeCells.forEach(([cq, cr]) => {
+        snapshot[`${cq},${cr}`] = prev[`${cq},${cr}`];
+      });
+      setHistory((h) => [...h.slice(-49), snapshot]);
+
+      // Apply new colors
+      const updated = { ...prev };
+      freeCells.forEach(([cq, cr]) => {
+        if (selectedTool === ERASER) {
+          delete updated[`${cq},${cr}`];
+        } else {
+          updated[`${cq},${cr}`] = selectedTool;
+        }
+      });
+      return updated;
+    });
+  };
+
+  /** Save or remove a label */
+  const handleLabelSubmit = () => {
+    if (!labelInput) return;
+    setLabels((prev) => {
+      const updated = { ...prev };
+      if (labelText.trim() === "") {
+        delete updated[labelInput];
+      } else {
+        updated[labelInput] = labelText.trim();
+      }
+      return updated;
+    });
+    setLabelInput(null);
+    setLabelText("");
+  };
+
+  /** Undo the last painting action */
+  const handleUndo = () => {
+    if (history.length === 0) return;
+    const last = history[history.length - 1];
+    setHistory((h) => h.slice(0, -1));
+    setColors((prev) => {
+      const updated = { ...prev };
+      Object.entries(last).forEach(([key, val]) => {
+        if (val === undefined) {
+          delete updated[key];
+        } else {
+          updated[key] = val;
+        }
+      });
+      return updated;
+    });
+  };
+
+  /** Reset to initial state (keeps protected zones) */
+  const handleReset = () => {
+    setColors({ ...PROTECTED });
+    setLabels({});
+    setHistory([]);
+  };
+
+  /** Save a legend name */
+  const handleLegendSave = (color, text) => {
+    setLegend((prev) => ({ ...prev, [color]: text }));
+    setEditingLegend(null);
+  };
+
+  // === Derived Data ===
+
+  /** Count of hexes per color */
+  const counts = useMemo(() => {
+    const map = {};
+    Object.values(colors).forEach((c) => {
+      map[c] = (map[c] || 0) + 1;
+    });
+    return map;
+  }, [colors]);
+
+  return {
+    // State
+    colors,
+    labels,
+    legend,
+    history,
+    selectedTool,
+    brushSize,
+    labelInput,
+    labelText,
+    editingLegend,
+    editingLegendText,
+    counts,
+    // Setters
+    setSelectedTool,
+    setBrushSize,
+    setLabelInput,
+    setLabelText,
+    setEditingLegend,
+    setEditingLegendText,
+    setColors,
+    setLabels,
+    setLegend,
+    // Actions
+    applyTool,
+    handleLabelSubmit,
+    handleUndo,
+    handleReset,
+    handleLegendSave,
+  };
+}
+
+// === Storage Helpers ===
+
+function loadFromStorage(key, defaultValue) {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+}
+
+function saveToStorage(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+================
+File: src/tools/svs/hooks/useMapActions.js
+================
+import { useStorage } from "../../../core/hooks/useStorage";
+
+export function useMapActions(deps) {
+  const { hex, maps, toast } = deps;
+  const svsStorage = useStorage("svs");
+
+  const { colors, labels, legend, setColors, setLabels, setLegend } = hex;
+
+  const {
+    selectedMap,
+    mapName,
+    pendingMapName,
+
+    setMapsRefresh,
+
+    setShowSavePopup,
+    setShowOverwritePopup,
+    setShowLoadPopup,
+    setShowDeletePopup,
+
+    setMapName,
+    setPendingMapName,
+    setSelectedMap,
+  } = maps;
+
+  const confirmSaveMap = () => {
+    const name = mapName.trim();
+    if (!name) return;
+
+    const existing = svsStorage.load(`map-${name}`, null);
+    if (existing) {
+      setPendingMapName(name);
+      setShowSavePopup(false);
+      setShowOverwritePopup(true);
+      return;
+    }
+
+    svsStorage.save(`map-${name}`, { colors, labels, legend });
+    setMapsRefresh((v) => v + 1);
+    setShowSavePopup(false);
+    setMapName("");
+    toast.showToast(`✓ Saved "${name}"`, "success");
+  };
+
+  const overwriteMap = () => {
+    svsStorage.save(`map-${pendingMapName}`, { colors, labels, legend });
+    setMapsRefresh((v) => v + 1);
+    setShowOverwritePopup(false);
+    setPendingMapName("");
+    setMapName("");
+    toast.showToast(`↺ Overwrote "${pendingMapName}"`, "info");
+  };
+
+  const confirmLoadMap = () => {
+    const map = svsStorage.load(`map-${selectedMap}`, null);
+    if (!map) return;
+
+    setColors(map.colors || {});
+    setLabels(map.labels || {});
+    setLegend(map.legend || {});
+
+    setShowLoadPopup(false);
+    setSelectedMap("");
+    toast.showToast(`📂 Loaded "${selectedMap}"`, "default");
+  };
+
+  const confirmDeleteMap = () => {
+    svsStorage.remove(`map-${selectedMap}`);
+    setMapsRefresh((v) => v + 1);
+    setShowDeletePopup(false);
+    setSelectedMap("");
+    toast.showToast(`🗑 Deleted "${selectedMap}"`, "danger");
+  };
+
+  return {
+    confirmSaveMap,
+    overwriteMap,
+    confirmLoadMap,
+    confirmDeleteMap,
+  };
+}
+
+================
+File: src/tools/svs/hooks/useMapManager.js
+================
+import { useState } from "react";
+
+export function useMapManager() {
+  const [mapsRefresh, setMapsRefresh] = useState(0);
+  const [showSavePopup, setShowSavePopup] = useState(false);
+  const [showOverwritePopup, setShowOverwritePopup] = useState(false);
+  const [showLoadPopup, setShowLoadPopup] = useState(false);
+  const [showDeletePopup, setShowDeletePopup] = useState(false);
+
+  const [mapName, setMapName] = useState("");
+  const [pendingMapName, setPendingMapName] = useState("");
+  const [selectedMap, setSelectedMap] = useState("");
+
+  const handleSaveMap = () => {
+    setMapName("");
+    setShowSavePopup(true);
+  };
+
+  const handleLoadRequest = (name) => {
+    setSelectedMap(name);
+    setShowLoadPopup(true);
+  };
+
+  const handleDeleteRequest = (name) => {
+    setSelectedMap(name);
+    setShowDeletePopup(true);
+  };
+
+  return {
+    mapsRefresh,
+    setMapsRefresh,
+
+    handleSaveMap,
+    handleLoadRequest,
+    handleDeleteRequest,
+
+    showSavePopup,
+    setShowSavePopup,
+
+    showOverwritePopup,
+    setShowOverwritePopup,
+
+    showLoadPopup,
+    setShowLoadPopup,
+
+    showDeletePopup,
+    setShowDeletePopup,
+
+    mapName,
+    setMapName,
+
+    pendingMapName,
+    setPendingMapName,
+
+    selectedMap,
+    setSelectedMap,
+  };
+}
+
+================
+File: src/tools/svs/utils/exportSvg.js
+================
+// tools/svs/utils/exportSvg.js
+import { axialToPixel } from "./hexMath";
+import { GRID_RANGE } from "../constants";
+
+const EXPORT_SIZE = 20;
+const SCALE = 2;
+const PADDING = 40;
+
+/**
+ * Exports the hex grid as a PNG image.
+ * Renders to SVG, then draws to canvas for download.
+ */
+export async function exportToPng(colors, labels, legend, onStart, onEnd) {
+  onStart();
+  await new Promise((res) => setTimeout(res, 50));
+
+  try {
+    const { width, height, offsetX, offsetY } = calculateGridBounds();
+
+    const hexSVG = buildHexSVG(colors, labels, offsetX, offsetY);
+    const legendSVG = buildLegendSVG(legend, colors, height);
+
+    const svgString = wrapSVG(width, height, hexSVG + legendSVG);
+
+    await renderSVGToPNG(svgString, width, height, onEnd);
+  } catch {
+    onEnd("Export failed. Try again.");
+  }
+}
+
+/** Calculate the bounding box of the entire grid */
+function calculateGridBounds() {
+  let minX = Infinity,
+    maxX = -Infinity;
+  let minY = Infinity,
+    maxY = -Infinity;
+
+  for (let q = -GRID_RANGE; q <= GRID_RANGE; q++) {
+    for (let r = -GRID_RANGE; r <= GRID_RANGE; r++) {
+      const s = -q - r;
+      if (Math.abs(s) > GRID_RANGE) continue;
+
+      const { x, y } = axialToPixel(q, r, EXPORT_SIZE);
+      minX = Math.min(minX, x - EXPORT_SIZE);
+      maxX = Math.max(maxX, x + EXPORT_SIZE);
+      minY = Math.min(minY, y - EXPORT_SIZE);
+      maxY = Math.max(maxY, y + EXPORT_SIZE);
+    }
+  }
+
+  const width = maxX - minX + PADDING * 2;
+  const height = maxY - minY + PADDING * 2;
+  const offsetX = -minX + PADDING;
+  const offsetY = -minY + PADDING;
+
+  return { width, height, offsetX, offsetY };
+}
+
+/** Build SVG for all hexagons */
+function buildHexSVG(colors, labels, offsetX, offsetY) {
+  let svg = "";
+
+  for (let q = -GRID_RANGE; q <= GRID_RANGE; q++) {
+    for (let r = -GRID_RANGE; r <= GRID_RANGE; r++) {
+      const s = -q - r;
+      if (Math.abs(s) > GRID_RANGE) continue;
+
+      const { x, y } = axialToPixel(q, r, EXPORT_SIZE);
+      const key = `${q},${r}`;
+      const fill = colors[key] || "#e5e7eb";
+      const label = labels[key];
+
+      svg += buildHexagon(x + offsetX, y + offsetY, fill);
+
+      if (label) {
+        svg += buildLabel(x + offsetX, y + offsetY, label);
+      }
+    }
+  }
+
+  return svg;
+}
+
+/** Build a single hexagon polygon */
+function buildHexagon(cx, cy, fill) {
+  const points = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i + Math.PI / 2;
+    const px = cx + EXPORT_SIZE * Math.cos(angle);
+    const py = cy + EXPORT_SIZE * Math.sin(angle);
+    points.push(`${px},${py}`);
+  }
+
+  return `<polygon points="${points.join(" ")}" fill="${fill}" stroke="#374151" stroke-width="0.5"/>`;
+}
+
+/** Build a label text element */
+function buildLabel(x, y, text) {
+  return `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="8" font-family="Arial" font-weight="bold" fill="#1f2937">${text}</text>`;
+}
+
+/** Build SVG for the legend */
+function buildLegendSVG(legend, colors, gridHeight) {
+  const entries = Object.entries(legend);
+  const usedColors = new Set(Object.values(colors));
+  const visible = entries.filter(([color]) => usedColors.has(color));
+
+  let svg = "";
+  visible.forEach(([color, name], i) => {
+    const x = PADDING;
+    const y = gridHeight - PADDING - (visible.length - i - 1) * 20;
+    svg += `<rect x="${x}" y="${y - 10}" width="14" height="14" fill="${color}" rx="2"/>`;
+    svg += `<text x="${x + 20}" y="${y}" font-size="12" font-family="Arial" fill="#1f2937">${name}</text>`;
+  });
+
+  return svg;
+}
+
+/** Wrap SVG content in proper SVG container */
+function wrapSVG(width, height, content) {
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      <rect width="100%" height="100%" fill="#f3f4f6"/>
+      ${content}
+    </svg>
+  `;
+}
+
+/** Render SVG string to PNG and trigger download */
+function renderSVGToPNG(svgString, width, height, onEnd) {
+  return new Promise((resolve) => {
+    const blob = new Blob([svgString], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = width * SCALE;
+      canvas.height = height * SCALE;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(SCALE, SCALE);
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+
+      const link = document.createElement("a");
+      link.download = "svs-plan.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+
+      onEnd(null);
+      resolve();
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      onEnd("Export failed. Try again.");
+      resolve();
+    };
+
+    img.src = url;
+  });
+}
+
+================
+File: src/tools/svs/utils/hexMath.js
+================
+export function hexPoints(cx, cy, size) {
+  const points = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i + Math.PI / 2;
+    const x = cx + size * Math.cos(angle);
+    const y = cy + size * Math.sin(angle);
+    points.push(`${x},${y}`);
+  }
+  return points.join(" ");
+}
+
+export function axialToPixel(q, r, hexSize) {
+  const x = hexSize * Math.sqrt(3) * (q + r / 2);
+  const y = hexSize * 1.5 * r;
+  return { x, y };
+}
+
+export function getBrushCells(q, r, radius) {
+  const results = [];
+  for (let dq = -radius; dq <= radius; dq++) {
+    for (let dr = -radius; dr <= radius; dr++) {
+      const ds = -dq - dr;
+      if (Math.abs(ds) <= radius) {
+        results.push([q + dq, r + dr]);
+      }
+    }
+  }
+  return results;
+}
+
+================
+File: src/tools/svs/constants.js
+================
+// SvS Planner constants
+
+export const PALETTE = [
+  "#4ade80",
+  "#f87171",
+  "#60a5fa",
+  "#fbbf24",
+  "#a78bfa",
+  "#4ADEDE",
+  "#00FFFF",
+];
+
+export const ERASER = "ERASER";
+export const LABEL_TOOL = "LABEL_TOOL";
+
+export const DEFAULT_LEGEND = {
+  "#00FFFF": "Capital Alliance",
+  "#4ade80": "Alliance 1",
+  "#f87171": "HQ Zone",
+  "#60a5fa": "Border",
+  "#fbbf24": "Alliance 2",
+  "#a78bfa": "Alliance 3",
+  "#4ADEDE": "Alliance 4",
+};
+
+export const GRID_RANGE = 40;
+
+function buildInitialColors() {
+  const range = 40;
+  const innerRadius = 17;
+  const outerRings = 5;
+  const initial = {};
+
+  for (let q = -range; q <= range; q++) {
+    for (let r = -range; r <= range; r++) {
+      const s = -q - r;
+      const dist = Math.max(Math.abs(q), Math.abs(r), Math.abs(s));
+
+      if (dist <= innerRadius) {
+        initial[`${q},${r}`] = "#f87171";
+      }
+
+      if (dist > range - outerRings && dist <= range) {
+        initial[`${q},${r}`] = "#60a5fa";
+      }
+    }
+  }
+
+  const extraRed = [
+    [0, -19],
+    [1, -19],
+    [2, -19],
+    [3, -19],
+    [-1, -18],
+    [0, -18],
+    [1, -18],
+    [2, -18],
+    [3, -18],
+    [-2, -17],
+    [-1, -17],
+    [-3, -16],
+    [-2, -16],
+    [-3, -15],
+    [18, -3],
+    [19, -3],
+    [18, -2],
+    [19, -2],
+    [18, -1],
+    [19, -1],
+    [18, 0],
+    [19, 0],
+    [17, 1],
+    [18, 1],
+    [16, 2],
+    [17, 2],
+    [15, 3],
+    [16, 3],
+    [-18, 15],
+    [-19, 16],
+    [-18, 16],
+    [-19, 17],
+    [-18, 17],
+    [-19, 18],
+    [-18, 18],
+    [-17, 18],
+    [-16, 18],
+    [-15, 18],
+    [-19, 19],
+    [-18, 19],
+    [-17, 19],
+    [-16, 19],
+  ];
+
+  extraRed.forEach(([q, r]) => {
+    initial[`${q},${r}`] = "#f87171";
+  });
+
+  return initial;
+}
+
+export const PROTECTED = buildInitialColors();
+
+================
+File: src/tools/svs/index.js
+================
+import SvsPlanner from "./SvsPlanner";
+
+/**
+ * SvS Planner tool configuration.
+ * This is the "info card" that describes the tool to the website.
+ */
+export const svsTool = {
+  id: "svs",
+  name: "SvS Planner",
+  icon: "🗺️",
+  description:
+    "Plan territory control for State vs State battles with an interactive hex grid.",
+  accent: "#4ade80",
+  component: SvsPlanner,
+};
+
+// Default export for convenience
+export { default } from "./SvsPlanner";
+export { default as SvsPlanner } from "./SvsPlanner";
+
+================
+File: src/tools/svs/SvsPlanner.jsx
+================
+import React from "react";
+import { useMediaQuery } from "../../core/hooks/useMediaQuery";
+import { ToolProvider } from "../../core/context/ToolContext";
+import SvsPlannerDesktop from "./SvsPlannerDesktop";
+import SvsPlannerMobile from "./SvsPlannerMobile";
+
+/**
+ * SvS Planner entry point.
+ * Detects screen size and renders the appropriate version.
+ *
+ * Desktop: Floating panels, full canvas
+ * Mobile: Bottom bar, full-screen panels, touch-optimized
+ */
+export default function SvsPlanner() {
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
+  return (
+    <ToolProvider>
+      {isMobile ? <SvsPlannerMobile /> : <SvsPlannerDesktop />}
+    </ToolProvider>
+  );
+}
+
+================
+File: src/tools/svs/SvsPlannerDesktop.jsx
+================
+// tools/svs/SvsPlannerDesktop.jsx
+import React, { useEffect, useState, useCallback } from "react";
+import { useTool } from "../../core/context/ToolContext";
+import { useViewport } from "../../core/hooks/useViewport";
+import { useHexState } from "./hooks/useHexState";
+import { useMapManager } from "./hooks/useMapManager";
+import { useMapActions } from "./hooks/useMapActions";
+import { useToast } from "../../core/hooks/useToast";
+import { exportToPng } from "./utils/exportSvg";
+import HexCanvas from "./components/HexCanvas";
+import BrushPanel from "./components/BrushPanel";
+import LegendPanel from "./components/LegendPanel";
+import MapsPanel from "./components/MapsPanel";
+import PopupManager from "../../core/components/PopupManager";
+import Toast from "../../core/components/Toast";
+
+export default function SvsPlannerDesktop() {
+  const baseSize = 20;
+  const viewport = useViewport();
+  const [hovered, setHovered] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const [hideUI, setHideUI] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+
+  const hex = useHexState();
+  const maps = useMapManager();
+  const toast = useToast();
+  const mapActions = useMapActions({ hex, maps, toast });
+  const { registerTool, updateState } = useTool();
+
+  const size = baseSize * viewport.zoom;
+
+  // Register tool actions with TopBar
+  useEffect(() => {
+    registerTool({
+      actions: {
+        undo: hex.handleUndo,
+        export: handleExport,
+        hideUI: handleHideUI,
+        reset: () => setShowReset(true),
+      },
+      state: {
+        canUndo: hex.history.length > 0,
+        isExporting: exporting,
+      },
+      toolbar: [
+        { id: "undo", icon: "↩", label: "Undo", disabled: !hex.history.length },
+        { id: "export", icon: "📷", label: "Export", disabled: exporting },
+        { id: "hideUI", icon: "🙈", label: "Hide UI" },
+        { id: "reset", icon: "🗑", label: "Reset", danger: true },
+      ],
+    });
+  }, [hex.history.length, exporting]);
+
+  // Update toolbar state when dependencies change
+  useEffect(() => {
+    updateState({
+      canUndo: hex.history.length > 0,
+      isExporting: exporting,
+    });
+  }, [hex.history.length, exporting]);
+
+  const handleExport = useCallback(() => {
+    exportToPng(
+      hex.colors,
+      hex.labels,
+      hex.legend,
+      () => setExporting(true),
+      (err) => {
+        if (err) toast.showToast(err, "danger");
+        setExporting(false);
+      },
+    );
+  }, [hex.colors, hex.labels, hex.legend, toast]);
+
+  const handleHideUI = useCallback(() => {
+    setHideUI(true);
+    setTimeout(() => setHideUI(false), 4000);
+  }, []);
+
+  const handleHexClick = useCallback(
+    (key) => {
+      const [q, r] = key.split(",").map(Number);
+      hex.applyTool(q, r);
+    },
+    [hex.applyTool],
+  );
+
+  const handleHexHover = useCallback((q, r) => {
+    setHovered(q === null ? null : { q, r });
+  }, []);
+
+  return (
+    <div
+      className="w-full h-full bg-gray-50 dark:bg-gray-950 relative touch-none overflow-hidden"
+      onWheel={viewport.handleWheel}
+      onMouseMove={viewport.handleMouseMove}
+      onMouseUp={viewport.handleMouseUp}
+      onMouseLeave={viewport.handleMouseUp}
+      onTouchMove={viewport.handleTouchMove}
+      onTouchEnd={viewport.handleTouchEnd}
+    >
+      {/* Coordinate display */}
+      {!hideUI && (
+        <div className="absolute top-4 left-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl shadow text-sm z-10 text-gray-700 dark:text-gray-300">
+          {hovered ? `x: ${hovered.q}, y: ${hovered.r}` : "Hover a hex"}
+        </div>
+      )}
+
+      {/* Floating panels */}
+      {!hideUI && (
+        <>
+          <BrushPanel
+            brushSize={hex.brushSize}
+            setBrushSize={hex.setBrushSize}
+          />
+          <LegendPanel
+            selectedTool={hex.selectedTool}
+            setSelectedTool={hex.setSelectedTool}
+            legend={hex.legend}
+            counts={hex.counts}
+            editingLegend={hex.editingLegend}
+            editingLegendText={hex.editingLegendText}
+            setEditingLegend={hex.setEditingLegend}
+            setEditingLegendText={hex.setEditingLegendText}
+            onLegendSave={hex.handleLegendSave}
+          />
+          <MapsPanel
+            onSave={maps.handleSaveMap}
+            onLoad={maps.handleLoadRequest}
+            onDelete={maps.handleDeleteRequest}
+            refreshKey={maps.mapsRefresh}
+          />
+        </>
+      )}
+
+      {/* Popups and notifications */}
+      <PopupManager
+        hex={hex}
+        maps={maps}
+        mapActions={mapActions}
+        exporting={exporting}
+        showReset={showReset}
+        setShowReset={setShowReset}
+      />
+      <Toast toast={toast.toast} />
+
+      {/* SVG canvas */}
+      <svg
+        width="100%"
+        height="100%"
+        onMouseDown={viewport.handleMouseDown}
+        onTouchStart={viewport.handleTouchStart}
+        style={{ cursor: viewport.dragging ? "grabbing" : "grab" }}
+      >
+        <g transform={`translate(${viewport.offset.x}, ${viewport.offset.y})`}>
+          <HexCanvas
+            size={size}
+            colors={hex.colors}
+            labels={hex.labels}
+            onHexClick={handleHexClick}
+            onHexHover={handleHexHover}
+          />
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+================
+File: src/tools/svs/SvsPlannerMobile.jsx
+================
+import React, { useEffect, useState, useCallback } from "react";
+import { useTool } from "../../core/context/ToolContext";
+import { useViewport } from "../../core/hooks/useViewport";
+import { useHexState } from "./hooks/useHexState";
+import { useMapManager } from "./hooks/useMapManager";
+import { useMapActions } from "./hooks/useMapActions";
+import { useToast } from "../../core/hooks/useToast";
+import { exportToPng } from "./utils/exportSvg";
+import { GRID_RANGE, PALETTE } from "./constants";
+import HexCanvas from "./components/HexCanvas";
+import PopupManager from "../../core/components/PopupManager";
+import Toast from "../../core/components/Toast";
+
+export default function SvsPlannerMobile() {
+  const baseSize = 20;
+  const viewport = useViewport();
+  const [exporting, setExporting] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [showColorSheet, setShowColorSheet] = useState(false);
+  const [activeBottomTool, setActiveBottomTool] = useState("paint");
+
+  const hex = useHexState();
+  const maps = useMapManager();
+  const toast = useToast();
+  const mapActions = useMapActions({ hex, maps, toast });
+  const { registerTool, updateState } = useTool();
+
+  const size = baseSize * viewport.zoom;
+
+  // Register tool actions with TopBar
+  useEffect(() => {
+    registerTool({
+      actions: {
+        undo: hex.handleUndo,
+        export: handleExport,
+        reset: () => setShowReset(true),
+      },
+      state: {
+        canUndo: hex.history.length > 0,
+      },
+      toolbar: [
+        { id: "undo", icon: "↩", label: "Undo", disabled: !hex.history.length },
+        { id: "export", icon: "📷", label: "Export" },
+        { id: "reset", icon: "🗑", label: "Reset", danger: true },
+      ],
+    });
+  }, [hex.history.length]);
+
+  // Update toolbar state
+  useEffect(() => {
+    updateState({
+      canUndo: hex.history.length > 0,
+    });
+  }, [hex.history.length]);
+
+  const handleExport = useCallback(() => {
+    exportToPng(
+      hex.colors,
+      hex.labels,
+      hex.legend,
+      () => setExporting(true),
+      (err) => {
+        if (err) toast.showToast(err, "danger");
+        setExporting(false);
+      },
+    );
+  }, [hex.colors, hex.labels, hex.legend, toast]);
+
+  const handleHexClick = useCallback(
+    (key) => {
+      const [q, r] = key.split(",").map(Number);
+      hex.applyTool(q, r);
+    },
+    [hex.applyTool],
+  );
+
+  const handleHexHover = useCallback((q, r) => {
+    // Mobile doesn't use hover
+  }, []);
+
+  const selectPaintTool = useCallback(
+    (color) => {
+      hex.setSelectedTool(color);
+      setActiveBottomTool("paint");
+    },
+    [hex],
+  );
+
+  const selectEraser = useCallback(() => {
+    hex.setSelectedTool("ERASER");
+    setActiveBottomTool("eraser");
+  }, [hex]);
+
+  const selectLabel = useCallback(() => {
+    hex.setSelectedTool("LABEL_TOOL");
+    setActiveBottomTool("label");
+  }, [hex]);
+
+  return (
+    <div className="w-full h-full bg-gray-50 dark:bg-gray-950 relative touch-none overflow-hidden">
+      {/* SVG canvas - ALL touch handlers added */}
+      <svg
+        width="100%"
+        height="100%"
+        onMouseDown={viewport.handleMouseDown}
+        onMouseMove={viewport.handleMouseMove}
+        onMouseUp={viewport.handleMouseUp}
+        onMouseLeave={viewport.handleMouseUp}
+        onTouchStart={viewport.handleTouchStart}
+        onTouchMove={viewport.handleTouchMove}
+        onTouchEnd={viewport.handleTouchEnd}
+        style={{
+          cursor: viewport.dragging ? "grabbing" : "grab",
+          touchAction: "none",
+        }}
+      >
+        <g transform={`translate(${viewport.offset.x}, ${viewport.offset.y})`}>
+          <HexCanvas
+            size={size}
+            colors={hex.colors}
+            labels={hex.labels}
+            onHexClick={handleHexClick}
+            onHexHover={handleHexHover}
+          />
+        </g>
+      </svg>
+
+      {/* Bottom tool bar with safe area padding */}
+      <div
+        className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-2 pt-2 flex items-center justify-around z-20"
+        style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+      >
+        <PaintButton
+          selectedTool={hex.selectedTool}
+          isActive={activeBottomTool === "paint"}
+          onClick={() => setShowColorSheet(true)}
+        />
+        <ToolButton
+          icon="✕"
+          label="Eraser"
+          isActive={activeBottomTool === "eraser"}
+          onClick={selectEraser}
+        />
+        <ToolButton
+          icon="T"
+          label="Label"
+          isActive={activeBottomTool === "label"}
+          onClick={selectLabel}
+          bold
+        />
+        <BrushSizeSelector size={hex.brushSize} onChange={hex.setBrushSize} />
+      </div>
+
+      {/* Color picker sheet */}
+      {showColorSheet && (
+        <ColorPickerSheet
+          palette={PALETTE}
+          onSelect={(color) => {
+            selectPaintTool(color);
+            setShowColorSheet(false);
+          }}
+          onClose={() => setShowColorSheet(false)}
+        />
+      )}
+
+      {/* Popups */}
+      <PopupManager
+        hex={hex}
+        maps={maps}
+        mapActions={mapActions}
+        exporting={exporting}
+        showReset={showReset}
+        setShowReset={setShowReset}
+      />
+      <Toast toast={toast.toast} />
+    </div>
+  );
+}
+
+/** Paint button showing current color */
+function PaintButton({ selectedTool, isActive, onClick }) {
+  const isSpecialTool =
+    selectedTool === "ERASER" || selectedTool === "LABEL_TOOL";
+  const color = isSpecialTool ? "#e5e7eb" : selectedTool;
+
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition ${
+        isActive
+          ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600"
+          : "text-gray-600 dark:text-gray-400"
+      }`}
+    >
+      <div
+        className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600"
+        style={{ backgroundColor: color }}
+      />
+      <span className="text-xs font-medium">Paint</span>
+    </button>
+  );
+}
+
+/** Generic tool button */
+function ToolButton({ icon, label, isActive, onClick, bold }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition ${
+        isActive
+          ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600"
+          : "text-gray-600 dark:text-gray-400"
+      }`}
+    >
+      <span className={`text-xl ${bold ? "font-bold" : ""}`}>{icon}</span>
+      <span className="text-xs font-medium">{label}</span>
+    </button>
+  );
+}
+
+/** Brush size selector */
+function BrushSizeSelector({ size, onChange }) {
+  const sizes = [1, 2, 3, 4, 5];
+
+  return (
+    <div className="flex flex-col items-center gap-0.5 px-3 py-1.5">
+      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+        Size
+      </span>
+      <div className="flex gap-1">
+        {sizes.map((v) => (
+          <button
+            key={v}
+            onClick={() => onChange(v)}
+            className={`w-6 h-6 rounded-lg text-xs font-bold transition ${
+              size === v
+                ? "bg-indigo-500 text-white"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600"
+            }`}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Color picker bottom sheet */
+function ColorPickerSheet({ palette, onSelect, onClose }) {
+  return (
+    <div className="absolute inset-x-0 bottom-0 bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl p-6 z-30">
+      <div className="w-12 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4" />
+      <h3 className="text-lg font-semibold text-center mb-4">Select Color</h3>
+      <div className="grid grid-cols-4 gap-4 max-w-xs mx-auto">
+        {palette.map((color) => (
+          <button
+            key={color}
+            onClick={() => onSelect(color)}
+            className="w-16 h-16 rounded-2xl transition active:scale-95 shadow-sm"
+            style={{ backgroundColor: color }}
+          />
+        ))}
+      </div>
+      <button
+        onClick={onClose}
+        className="w-full mt-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-sm font-medium"
+      >
+        Cancel
+      </button>
+    </div>
+  );
+}
+
+================
+File: src/tools/index.js
+================
+import { svsTool } from "./svs";
+
+/**
+ * Central registry for all tools.
+ * Each tool exports a config object with its metadata and component.
+ *
+ * To add a new tool:
+ * 1. Create a new folder in tools/
+ * 2. Export a tool config from tools/[new-tool]/index.js
+ * 3. Import it here and add to the registry
+ */
+
+const tools = [
+  svsTool,
+  // Future tools go here:
+  // calculatorTool,
+  // labPlannerTool,
+  // badgesTool,
+  // modVehicleTool,
+  // infoTool,
+  // guidesTool,
+];
+
+/**
+ * Tool registry - provides methods to query available tools.
+ */
+export const toolRegistry = {
+  /**
+   * Get all registered tools.
+   * @returns {Array} List of tool configs
+   */
+  getAll() {
+    return tools;
+  },
+
+  /**
+   * Get a tool by its ID.
+   * @param {string} id - Tool ID
+   * @returns {Object|null} Tool config or null if not found
+   */
+  getById(id) {
+    return tools.find((tool) => tool.id === id) || null;
+  },
+
+  /**
+   * Check if a tool exists.
+   * @param {string} id - Tool ID
+   * @returns {boolean}
+   */
+  has(id) {
+    return tools.some((tool) => tool.id === id);
+  },
+};
+
+// Also export individual tools for direct imports
+export { svsTool } from "./svs";
+
+================
+File: src/main.jsx
+================
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./app.jsx";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  React.createElement(App),
+);
+
+================
+File: .gitignore
+================
+node_modules/
+
+================
+File: package.json
+================
+{
+  "name": "lastz-planner",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.8"
+  }
+}
+
+================
+File: README.md
+================
+# LastZ-SvSPlanner
+
+================
+File: vite.config.js
+================
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+})
+
+================
+File: src/app.jsx
+================
+import React, { useState } from "react";
+import { AppProvider } from "./core/context/AppContext";
+import { useApp } from "./core/context/AppContext";
+import { toolRegistry } from "./tools";
+import Layout from "./core/layout/Layout";
+import LandingPage from "./pages/LandingPage";
+import ErrorBoundary from "./core/components/ErrorBoundary";
+
+function ActiveTool({ toolId }) {
+  const [errorKey, setErrorKey] = useState(0);
+  const tool = toolRegistry.getById(toolId);
+
+  if (!tool) {
+    return (
+      <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+        Tool not found: {toolId}
+      </div>
+    );
+  }
+
+  return (
+    <ErrorBoundary key={errorKey} onReset={() => setErrorKey((k) => k + 1)}>
+      <tool.component />
+    </ErrorBoundary>
+  );
+}
+
+function AppInner() {
+  const { currentTool } = useApp();
+  const isHome = currentTool === "home";
+
+  return (
+    <Layout toolConfig={isHome ? null : toolRegistry.getById(currentTool)}>
+      {isHome ? <LandingPage /> : <ActiveTool toolId={currentTool} />}
+    </Layout>
+  );
+}
+
+export default function App() {
+  return (
+    <AppProvider>
+      <AppInner />
+    </AppProvider>
+  );
+}
+
+================
+File: index.html
+================
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>LastZ Planner</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+      window.tailwind = {
+        config: {
+          darkMode: 'class',
+        }
+      };
+    </script>
+    <style>
+      button, div, span, input, aside, header, footer, main, nav, section, article {
+        transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+
+
+
+
+
+================================================================
+End of Codebase
+================================================================
